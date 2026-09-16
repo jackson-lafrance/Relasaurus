@@ -26,14 +26,22 @@ public:
   Relation(std::string n, std::initializer_list<Tuple> tup,
            AttributeNames attrs);
 
+  void insert_row(const Tuple &tuple);
+  void insert_rows(std::initializer_list<Tuple> tup);
+  std::set<Tuple> get_rows();
+  std::string get_name();
+  AttributeNames get_schema();
+
 private:
   std::string name;
   AttributeNames attributes;
   AttributeIndexes attribute_indexes;
   std::set<Tuple> tuples;
 
-  void setupAttributes(AttributeNames attrs);
-  void validateSchema(const Tuple &tuple);
+  void setup_schema(AttributeNames attrs);
+  void validate_schema(const Tuple &tuple);
+  
+  void insert_tuple(const Tuple &tuple);
 };
 
 #endif // RELATIONS_H

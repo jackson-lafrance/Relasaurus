@@ -7,20 +7,20 @@
 
 class Algebra {
 public:
-  static Relation selection(Relation &relation,
-                            std::function<bool(Tuple)> predicate);
-  static Relation projection(Relation &relation,
+  static Relation selection(const Relation &relation,
+                            std::function<bool(Tuple, AttributeNames)> predicate);
+  static Relation projection(const Relation &relation,
                              std::initializer_list<std::string> attributes);
 
-  static Relation rename(Relation &rel_1, std::string old_name,
+  static Relation rename(const Relation &rel_1, std::string old_name,
                          std::string new_name);
 
-  static Relation times(Relation &rel_1, Relation &rel_2);
-  static Relation join(Relation &rel_1, std::function<bool(Tuple)> predicate);
+  static Relation times(const Relation &rel_1, const Relation &rel_2);
+  static Relation join(const Relation &rel_1, std::function<bool(Tuple)> predicate);
 
-  static Relation onion(Relation &rel_1, Relation &rel_2);
-  static Relation intersect(Relation &rel_1, Relation &rel_2);
-  static Relation minus(Relation &rel_1, Relation &rel_2);
+  static Relation onion(const Relation &rel_1, const Relation &rel_2);
+  static Relation intersect(const Relation &rel_1, const Relation &rel_2);
+  static Relation minus(const Relation &rel_1, const Relation &rel_2);
 };
 
 #endif // ALGEBRA_H

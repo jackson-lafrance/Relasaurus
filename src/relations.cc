@@ -32,21 +32,90 @@ void Relation::insert_row(const Tuple &tuple) {
   insert_tuple(tuple);
 }
 
-std::set<Tuple> Relation::get_rows() {
+std::set<Tuple> Relation::get_rows() const {
   return tuples;
 };
 
-std::string Relation::get_name() {
+std::string Relation::get_name() const {
   return name;
 };
 
-AttributeNames Relation::get_schema() {
+AttributeNames Relation::get_schema() const {
   return attributes;
 };
 
-AttributeIndexes Relation::get_schema_indexes() {
+AttributeIndexes Relation::get_schema_indexes() const {
   return attribute_indexes;
 };
+
+std::string Relation::toString() const {
+  struct ValueFormatter {
+    std::string operator()(int value) const { return std::to_string(value); }
+    std::string operator()(double value) const { return std::to_string(value); }
+    std::string operator()(const std::string &value) const { return value; }
+  };
+
+  std::vector<std::string> column_names(attribute_indexes.size());
+  for (const auto &[attribute_name, attribute] : attributes) {
+    column_names.at(attribute.index) = attribute_name;
+  }
+
+  std::vector<std::vector<std::string>> rows;
+  for (const auto &tuple : tuples) {
+    std::vector<std::string> row;
+    for (const auto &value : tuple) {
+      row.push_back(std::visit(ValueFormatter{}, value));
+    }
+    rows.push_back(row);
+  }
+
+  std::vector<std::size_t> widths(column_names.size(), 0);
+  for (std::size_t i = 0; i < column_names.size(); ++i) {
+    widths[i] = column_names[i].size();
+  }
+  for (const auto &row : rows) {
+    for (std::size_t i = 0; i < row.size(); ++i) {
+      if (row[i].size() > widths[i]) {
+        widths[i] = row[i].size();
+      }
+    }
+  }
+
+  std::string output = "Relation: " + name + "\n";
+  if (widths.empty()) {
+    return output;
+  }
+
+  auto separator = [&]() {
+    std::string line = "+";
+    for (const auto width : widths) {
+      line += std::string(width + 2, '-');
+      line += "+";
+    }
+    return line + "\n";
+  };
+
+  auto format_row = [&](const std::vector<std::string> &row) {
+    std::string line = "|";
+    for (std::size_t i = 0; i < widths.size(); ++i) {
+      const std::string &value = row[i];
+      line += " " + value;
+      line += std::string(widths[i] - value.size() + 1, ' ');
+      line += "|";
+    }
+    return line + "\n";
+  };
+
+  output += separator();
+  output += format_row(column_names);
+  output += separator();
+  for (const auto &row : rows) {
+    output += format_row(row);
+  }
+  output += separator();
+
+  return output;
+}
 
 void Relation::setup_schema(AttributeNames attrs) {
   attributes = attrs;

@@ -1,19 +1,21 @@
 #include "../include/algebra.h"
+#include <iostream>
 #include <stdexcept>
 
-Relation Algebra::selection(Relation &relation,
-                            std::function<bool(Tuple)> predicate) {
+Relation
+Algebra::selection(const Relation &relation,
+                   std::function<bool(Tuple, AttributeNames)> predicate) {
   Relation out(relation.get_name(), relation.get_schema());
 
   for (const auto &tuple : relation.get_rows()) {
-    if (predicate(tuple)) {
+    if (predicate(tuple, relation.get_schema())) {
       out.insert_row(tuple);
     }
   }
   return out;
 }
 
-Relation Algebra::projection(Relation &relation,
+Relation Algebra::projection(const Relation &relation,
                              std::initializer_list<std::string> attributes) {
   AttributeNames new_schema;
 
@@ -42,4 +44,29 @@ Relation Algebra::projection(Relation &relation,
   }
 
   return out;
+}
+
+bool condition(Tuple tuple, AttributeNames schema) {
+  return std::get<int>(tuple[schema["Grade"].index]) > 80;
+}
+
+int main() {
+  AttributeNames attr1 = {
+      {"Name", {0, STRING}}, {"Grade", {1, INTEGER}}, {"ID", {2, INTEGER}}};
+
+  Relation relation1 = Relation(
+      "students", {{"Bobby", 99, 1}, {"Selsabeel", 88, 2}, {"Moses", 77, 3}},
+      attr1);
+
+  std::cout << relation1.toString() << std::endl;
+
+  std::cout << Algebra::selection(relation1, condition).toString();
+
+  std::cout << Algebra::projection(relation1, {"Name", "ID"}).toString();
+  std::cout << Algebra::projection(
+      Algebra::selection(relation1, condition),
+      {"Name", "ID"})
+                   .toString();
+
+  return 0;
 }

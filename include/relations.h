@@ -28,10 +28,13 @@ public:
 
   void insert_row(const Tuple &tuple);
   void insert_rows(std::initializer_list<Tuple> tup);
-  std::set<Tuple> get_rows();
-  std::string get_name();
-  AttributeNames get_schema();
-  AttributeIndexes get_schema_indexes();
+
+  std::set<Tuple> get_rows() const;
+  std::string get_name() const;
+  AttributeNames get_schema() const;
+  AttributeIndexes get_schema_indexes() const;
+
+  std::string toString() const;
 
 private:
   std::string name;

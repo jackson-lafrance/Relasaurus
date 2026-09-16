@@ -31,6 +31,7 @@ public:
   std::set<Tuple> get_rows();
   std::string get_name();
   AttributeNames get_schema();
+  AttributeIndexes get_schema_indexes();
 
 private:
   std::string name;

@@ -44,6 +44,10 @@ AttributeNames Relation::get_schema() {
   return attributes;
 };
 
+AttributeIndexes Relation::get_schema_indexes() {
+  return attribute_indexes;
+};
+
 void Relation::setup_schema(AttributeNames attrs) {
   attributes = attrs;
   attribute_indexes.resize(attributes.size());

@@ -116,8 +116,48 @@ Relation Algebra::times(const Relation &rel_1, const Relation &rel_2) {
 
 Relation Algebra::join(const Relation &rel_1, const Relation &rel_2,
                        std::function<bool(Tuple, AttributeNames)> predicate) {
-  Relation big_boy = times(rel_1, rel_2);
-  return selection(big_boy, predicate);
+  return selection(times(rel_1, rel_2), predicate);
+}
+
+Relation Algebra::onion(const Relation &rel_1, const Relation &rel_2) {
+  if (!compare_schemas(rel_1, rel_2))
+    throw std::runtime_error("SCHEMA'S NOT COMPATIBLE");
+  Relation out = Relation(rel_1.get_name(), rel_1.get_schema());
+
+  for (const auto &tuple : rel_1.get_rows()) {
+    out.insert_row(tuple);
+  }
+
+  for (const auto &tuple : rel_2.get_rows()) {
+    out.insert_row(tuple);
+  }
+
+  return out;
+}
+
+bool Algebra::compare_schemas(const Relation &rel_1, const Relation &rel_2) {
+  const auto schema_1 = rel_1.get_schema();
+  const auto schema_2 = rel_2.get_schema();
+
+  if (schema_1.size() != schema_2.size()) {
+    return false;
+  }
+
+  for (const auto &[name, attr_1] : schema_1) {
+    const auto it = schema_2.find(name);
+
+    if (it == schema_2.end()) {
+      return false;
+    }
+
+    const auto &attr_2 = it->second;
+
+    if (attr_1.index != attr_2.index || attr_1.type != attr_2.type) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 bool condition(Tuple tuple, AttributeNames schema) {
@@ -147,9 +187,14 @@ int main() {
                                 },
                                 attr2);
 
+  Relation relation3 = Relation(
+      "other students", {{"Ann", 99, 1}, {"Soonwoo", 88, 2}},
+      attr1);
+
   std::cout << std::endl << "Relation test" << std::endl;
   std::cout << relation1.toString() << std::endl;
   std::cout << relation2.toString() << std::endl;
+  std::cout << relation3.toString() << std::endl;
 
   std::cout << std::endl << "Selection test grade > 80" << std::endl;
   std::cout << Algebra::selection(relation1, condition).toString();
@@ -157,7 +202,9 @@ int main() {
   std::cout << std::endl << "Projection test name and id" << std::endl;
   std::cout << Algebra::projection(relation1, {"Name", "ID"}).toString();
 
-  std::cout << std::endl << "Projection and Selection test grade > 80 and name and id" << std::endl;
+  std::cout << std::endl
+            << "Projection and Selection test grade > 80 and name and id"
+            << std::endl;
   std::cout << Algebra::projection(Algebra::selection(relation1, condition),
                                    {"Name", "ID"})
                    .toString();
@@ -173,6 +220,9 @@ int main() {
 
   std::cout << std::endl << "Join test grade > 80" << std::endl;
   std::cout << Algebra::join(relation1, relation2, join_condition).toString();
+
+  std::cout << std::endl << "Onion test" << std::endl;
+  std::cout << Algebra::onion(relation1, relation3).toString();
 
   return 0;
 }

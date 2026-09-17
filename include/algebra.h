@@ -24,6 +24,9 @@ public:
   static Relation onion(const Relation &rel_1, const Relation &rel_2);
   static Relation intersect(const Relation &rel_1, const Relation &rel_2);
   static Relation minus(const Relation &rel_1, const Relation &rel_2);
+  
+private:
+  static bool compare_schemas(const Relation &rel_1, const Relation &rel_2);
 };
 
 #endif // ALGEBRA_H

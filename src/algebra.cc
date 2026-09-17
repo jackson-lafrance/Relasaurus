@@ -137,18 +137,28 @@ int main() {
                                 },
                                 attr2);
 
+  std::cout << std::endl << "Relation test" << std::endl;
   std::cout << relation1.toString() << std::endl;
 
+  std::cout << std::endl << "Selection test" << std::endl;
   std::cout << Algebra::selection(relation1, condition).toString();
 
+  std::cout << std::endl << "Projection test" << std::endl;
   std::cout << Algebra::projection(relation1, {"Name", "ID"}).toString();
+
+  std::cout << std::endl << "Projection and Selection test" << std::endl;
   std::cout << Algebra::projection(Algebra::selection(relation1, condition),
                                    {"Name", "ID"})
                    .toString();
 
+  std::cout << std::endl << "Rename attribute test" << std::endl;
   std::cout << Algebra::rename(relation1, "Name", "SOONWOO").toString();
 
+  std::cout << std::endl << "Rename relation test" << std::endl;
+  std::cout << Algebra::rename(relation1, "SOONWOO").toString();
+
+  std::cout << std::endl << "Times test" << std::endl;
   std::cout << Algebra::times(relation1, relation2).toString();
 
-          return 0;
+  return 0;
 }

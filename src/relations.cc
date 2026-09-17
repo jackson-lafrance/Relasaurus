@@ -1,46 +1,37 @@
 #include "../include/relations.h"
-#include <initializer_list>
 #include <stdexcept>
+#include <utility>
 
-Relation::Relation(std::string n, AttributeNames attrs) {
-  name = n;
+Relation::Relation(std::string n, AttributeNames attrs) : name(std::move(n)) {
+  setup_schema(std::move(attrs));
+}
 
-  setup_schema(attrs);
-};
+Relation::Relation(std::string n, std::set<Tuple> tup, AttributeNames attrs)
+    : name(std::move(n)) {
+  setup_schema(std::move(attrs));
+  validate_rows(tup);
+  tuples = std::move(tup);
+}
 
-Relation::Relation(std::string n, std::initializer_list<Tuple> tup,
-                   AttributeNames attrs) {
-  name = n;
-
-  setup_schema(attrs);
-
-  insert_rows(tup);
-};
-
-void Relation::insert_rows(std::initializer_list<Tuple> tup) {
-  for (const auto &tuple : tup) {
-    validate_schema(tuple);
-  }
-
-  for (const auto &tuple : tup) {
-    insert_tuple(tuple);
-  }
+void Relation::insert_rows(const std::set<Tuple> &tup) {
+  validate_rows(tup);
+  tuples.insert(tup.begin(), tup.end());
 }
 
 void Relation::insert_row(const Tuple &tuple) {
   validate_schema(tuple);
-  insert_tuple(tuple);
+  tuples.insert(tuple);
 }
 
-std::set<Tuple> Relation::get_rows() const { return tuples; };
+const std::set<Tuple> &Relation::get_rows() const { return tuples; }
 
-std::string Relation::get_name() const { return name; };
+std::string Relation::get_name() const { return name; }
 
-AttributeNames Relation::get_schema() const { return attributes; };
+AttributeNames Relation::get_schema() const { return attributes; }
 
 AttributeIndexes Relation::get_schema_indexes() const {
   return attribute_indexes;
-};
+}
 
 std::string Relation::toString() const {
   struct ValueFormatter {
@@ -112,11 +103,17 @@ std::string Relation::toString() const {
 }
 
 void Relation::setup_schema(AttributeNames attrs) {
-  attributes = attrs;
+  attributes = std::move(attrs);
   attribute_indexes.resize(attributes.size());
 
   for (const auto &[name, attribute] : attributes) {
     attribute_indexes.at(attribute.index) = attribute.type;
+  }
+}
+
+void Relation::validate_rows(const std::set<Tuple> &tup) {
+  for (const auto &tuple : tup) {
+    validate_schema(tuple);
   }
 }
 
@@ -141,5 +138,3 @@ void Relation::validate_schema(const Tuple &tuple) {
       throw std::runtime_error("TUPLE TYPES DO NOT MATCH SCHEMA");
   }
 }
-
-void Relation::insert_tuple(const Tuple &tuple) { tuples.insert(tuple); }

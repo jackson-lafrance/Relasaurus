@@ -114,8 +114,18 @@ Relation Algebra::times(const Relation &rel_1, const Relation &rel_2) {
   return out;
 }
 
+Relation Algebra::join(const Relation &rel_1, const Relation &rel_2,
+                       std::function<bool(Tuple, AttributeNames)> predicate) {
+  Relation big_boy = times(rel_1, rel_2);
+  return selection(big_boy, predicate);
+}
+
 bool condition(Tuple tuple, AttributeNames schema) {
   return std::get<int>(tuple[schema["Grade"].index]) > 80;
+}
+
+bool join_condition(Tuple tuple, AttributeNames schema) {
+  return std::get<int>(tuple[schema["students.Grade"].index]) > 80;
 }
 
 int main() {
@@ -139,14 +149,15 @@ int main() {
 
   std::cout << std::endl << "Relation test" << std::endl;
   std::cout << relation1.toString() << std::endl;
+  std::cout << relation2.toString() << std::endl;
 
-  std::cout << std::endl << "Selection test" << std::endl;
+  std::cout << std::endl << "Selection test grade > 80" << std::endl;
   std::cout << Algebra::selection(relation1, condition).toString();
 
-  std::cout << std::endl << "Projection test" << std::endl;
+  std::cout << std::endl << "Projection test name and id" << std::endl;
   std::cout << Algebra::projection(relation1, {"Name", "ID"}).toString();
 
-  std::cout << std::endl << "Projection and Selection test" << std::endl;
+  std::cout << std::endl << "Projection and Selection test grade > 80 and name and id" << std::endl;
   std::cout << Algebra::projection(Algebra::selection(relation1, condition),
                                    {"Name", "ID"})
                    .toString();
@@ -159,6 +170,9 @@ int main() {
 
   std::cout << std::endl << "Times test" << std::endl;
   std::cout << Algebra::times(relation1, relation2).toString();
+
+  std::cout << std::endl << "Join test grade > 80" << std::endl;
+  std::cout << Algebra::join(relation1, relation2, join_condition).toString();
 
   return 0;
 }

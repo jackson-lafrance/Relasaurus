@@ -18,8 +18,8 @@ public:
                          std::string new_name);
 
   static Relation times(const Relation &rel_1, const Relation &rel_2);
-  static Relation join(const Relation &rel_1,
-                       std::function<bool(Tuple)> predicate);
+  static Relation join(const Relation &rel_1, const Relation &rel_2,
+                       std::function<bool(Tuple, AttributeNames)> predicate);
 
   static Relation onion(const Relation &rel_1, const Relation &rel_2);
   static Relation intersect(const Relation &rel_1, const Relation &rel_2);

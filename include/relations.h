@@ -44,7 +44,7 @@ private:
 
   void setup_schema(AttributeNames attrs);
   void validate_schema(const Tuple &tuple);
-  
+
   void insert_tuple(const Tuple &tuple);
 };
 

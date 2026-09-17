@@ -32,17 +32,11 @@ void Relation::insert_row(const Tuple &tuple) {
   insert_tuple(tuple);
 }
 
-std::set<Tuple> Relation::get_rows() const {
-  return tuples;
-};
+std::set<Tuple> Relation::get_rows() const { return tuples; };
 
-std::string Relation::get_name() const {
-  return name;
-};
+std::string Relation::get_name() const { return name; };
 
-AttributeNames Relation::get_schema() const {
-  return attributes;
-};
+AttributeNames Relation::get_schema() const { return attributes; };
 
 AttributeIndexes Relation::get_schema_indexes() const {
   return attribute_indexes;

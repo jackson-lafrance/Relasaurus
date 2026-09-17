@@ -1,4 +1,4 @@
-#include "../include/relations.h"
+#include "relations.h"
 #include <stdexcept>
 #include <utility>
 

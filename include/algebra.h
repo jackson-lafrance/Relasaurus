@@ -17,7 +17,7 @@ public:
   static Relation rename(const Relation &relation, std::string old_name,
                          std::string new_name);
 
-  static Relation times(const Relation &rel_1, const Relation &rel_2);
+  static Relation times(const Relation &rel_1, const Relation &rel_2, std::string modifier = "TIMES");
   static Relation join(const Relation &rel_1, const Relation &rel_2,
                        std::function<bool(Tuple, AttributeNames)> predicate);
 

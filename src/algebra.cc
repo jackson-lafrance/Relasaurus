@@ -1,4 +1,4 @@
-#include "../include/algebra.h"
+#include "algebra.h"
 #include <iostream>
 #include <set>
 #include <stdexcept>
@@ -48,8 +48,7 @@ Relation Algebra::projection(const Relation &relation,
     rows.insert(std::move(new_tuple));
   }
 
-  return Relation(relation.get_name(), std::move(rows),
-                  std::move(new_schema));
+  return Relation(relation.get_name(), std::move(rows), std::move(new_schema));
 }
 
 Relation Algebra::rename(const Relation &relation, std::string new_name) {
@@ -76,11 +75,11 @@ Relation Algebra::rename(const Relation &relation, std::string old_attr,
   new_schema.erase(old_attr);
 
   auto rows = relation.get_rows();
-  return Relation(relation.get_name(), std::move(rows),
-                  std::move(new_schema));
+  return Relation(relation.get_name(), std::move(rows), std::move(new_schema));
 }
 
-Relation Algebra::times(const Relation &rel_1, const Relation &rel_2) {
+Relation Algebra::times(const Relation &rel_1, const Relation &rel_2,
+                        std::string modifier) {
   AttributeNames attribute_names;
   const auto schema_1 = rel_1.get_schema();
   const auto schema_2 = rel_2.get_schema();
@@ -94,9 +93,9 @@ Relation Algebra::times(const Relation &rel_1, const Relation &rel_2) {
   }
 
   for (const auto &attr : schema_2) {
-    attribute_names[name_2 + "." + attr.first] = {
-        .index = attr.second.index + length_of_attrs_1,
-        .type = attr.second.type};
+    attribute_names[name_2 + "." + attr.first] = {.index = attr.second.index +
+                                                           length_of_attrs_1,
+                                                  .type = attr.second.type};
   }
 
   std::set<Tuple> rows;
@@ -112,13 +111,47 @@ Relation Algebra::times(const Relation &rel_1, const Relation &rel_2) {
     }
   }
 
-  return Relation(name_1 + "_X_" + name_2, std::move(rows),
+  return Relation(name_1 + " " + modifier + " " + name_2, std::move(rows),
                   std::move(attribute_names));
 }
 
 Relation Algebra::join(const Relation &rel_1, const Relation &rel_2,
                        std::function<bool(Tuple, AttributeNames)> predicate) {
-  return selection(times(rel_1, rel_2), predicate);
+  return selection(times(rel_1, rel_2, "JOIN"), predicate);
+}
+
+Relation Algebra::intersect(const Relation &rel_1, const Relation &rel_2) {
+  if (!compare_schemas(rel_1, rel_2))
+    throw std::runtime_error("SCHEMA'S NOT COMPATIBLE");
+
+  auto rows = rel_1.get_rows();
+  std::set<Tuple> new_rows;
+
+  for (const auto &tuple : rows) {
+    if (rel_2.get_rows().find(tuple) != rel_2.get_rows().end()) {
+      new_rows.insert(tuple);
+    }
+  }
+
+  return Relation(rel_1.get_name() + " INTERSECT " + rel_2.get_name(),
+                  std::move(new_rows), rel_1.get_schema());
+}
+
+Relation Algebra::minus(const Relation &rel_1, const Relation &rel_2) {
+  if (!compare_schemas(rel_1, rel_2))
+    throw std::runtime_error("SCHEMA'S NOT COMPATIBLE");
+
+  auto rows = rel_1.get_rows();
+  std::set<Tuple> new_rows;
+
+  for (const auto &tuple : rows) {
+    if (rel_2.get_rows().find(tuple) == rel_2.get_rows().end()) {
+      new_rows.insert(tuple);
+    }
+  }
+
+  return Relation(rel_1.get_name() + " MINUS " + rel_2.get_name(),
+                  std::move(new_rows), rel_1.get_schema());
 }
 
 Relation Algebra::onion(const Relation &rel_1, const Relation &rel_2) {
@@ -128,8 +161,9 @@ Relation Algebra::onion(const Relation &rel_1, const Relation &rel_2) {
   auto rows = rel_1.get_rows();
   const auto &rows_2 = rel_2.get_rows();
   rows.insert(rows_2.begin(), rows_2.end());
-  auto schema = rel_1.get_schema();
-  return Relation(rel_1.get_name(), std::move(rows), std::move(schema));
+
+  return Relation(rel_1.get_name() + " UNION " + rel_2.get_name(),
+                  std::move(rows), rel_1.get_schema());
 }
 
 bool Algebra::compare_schemas(const Relation &rel_1, const Relation &rel_2) {
@@ -155,69 +189,4 @@ bool Algebra::compare_schemas(const Relation &rel_1, const Relation &rel_2) {
   }
 
   return true;
-}
-
-bool condition(Tuple tuple, AttributeNames schema) {
-  return std::get<int>(tuple[schema["Grade"].index]) > 80;
-}
-
-bool join_condition(Tuple tuple, AttributeNames schema) {
-  return std::get<int>(tuple[schema["students.Grade"].index]) > 80;
-}
-
-int main() {
-  AttributeNames attr1 = {
-      {"Name", {0, STRING}}, {"Grade", {1, INTEGER}}, {"ID", {2, INTEGER}}};
-
-  std::set<Tuple> tuples1 = {
-      {"Bobby", 99, 1}, {"Selsabeel", 88, 2}, {"Moses", 77, 3}};
-  Relation relation1("students", std::move(tuples1), attr1);
-
-  AttributeNames attr2 = {
-      {"Species", {0, STRING}}, {"ID", {1, INTEGER}}, {"Fruit", {2, STRING}}};
-
-  std::set<Tuple> tuples2 = {
-      {"chimp", 1, "banana"},
-      {"orangutan", 2, "watermelon"},
-      {"ape", 3, "coconut"},
-  };
-  Relation relation2("monkey", std::move(tuples2), attr2);
-
-  std::set<Tuple> tuples3 = {{"Ann", 99, 1}, {"Soonwoo", 88, 2}};
-  Relation relation3("other students", std::move(tuples3), attr1);
-
-  std::cout << std::endl << "Relation test" << std::endl;
-  std::cout << relation1.toString() << std::endl;
-  std::cout << relation2.toString() << std::endl;
-  std::cout << relation3.toString() << std::endl;
-
-  std::cout << std::endl << "Selection test grade > 80" << std::endl;
-  std::cout << Algebra::selection(relation1, condition).toString();
-
-  std::cout << std::endl << "Projection test name and id" << std::endl;
-  std::cout << Algebra::projection(relation1, {"Name", "ID"}).toString();
-
-  std::cout << std::endl
-            << "Projection and Selection test grade > 80 and name and id"
-            << std::endl;
-  std::cout << Algebra::projection(Algebra::selection(relation1, condition),
-                                   {"Name", "ID"})
-                   .toString();
-
-  std::cout << std::endl << "Rename attribute test" << std::endl;
-  std::cout << Algebra::rename(relation1, "Name", "SOONWOO").toString();
-
-  std::cout << std::endl << "Rename relation test" << std::endl;
-  std::cout << Algebra::rename(relation1, "SOONWOO").toString();
-
-  std::cout << std::endl << "Times test" << std::endl;
-  std::cout << Algebra::times(relation1, relation2).toString();
-
-  std::cout << std::endl << "Join test grade > 80" << std::endl;
-  std::cout << Algebra::join(relation1, relation2, join_condition).toString();
-
-  std::cout << std::endl << "Onion test" << std::endl;
-  std::cout << Algebra::onion(relation1, relation3).toString();
-
-  return 0;
 }

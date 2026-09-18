@@ -1,7 +1,7 @@
 #ifndef ALGEBRA_H
 #define ALGEBRA_H
 
-#include "relations.h"
+#include "relation.h"
 #include <functional>
 #include <initializer_list>
 

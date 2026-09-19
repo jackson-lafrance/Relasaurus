@@ -5,7 +5,7 @@ CXXFLAGS := -std=c++20 -Wall -Wextra -Wpedantic -MMD -MP
 
 TARGET := build/relasaurus
 
-SOURCES := src/algebra.cc src/relations.cc
+SOURCES := src/algebra.cc src/relation.cc src/schema.cc
 TEST_SOURCES := test/algebra_test.cc
 
 OBJECTS := $(SOURCES:src/%.cc=build/%.o)

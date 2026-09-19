@@ -1,122 +1,112 @@
 #include "algebra.h"
-#include <iostream>
-#include <set>
 #include <stdexcept>
-#include <string>
 #include <utility>
 
-Relation
-Algebra::selection(const Relation &relation,
-                   std::function<bool(Tuple, AttributeNames)> predicate) {
-  std::set<Tuple> rows;
-  auto schema = relation.get_schema();
+Relation Algebra::selection(const Relation &relation, Predicate predicate) {
+  Relation out(relation.name(), relation.schema());
 
-  for (const auto &tuple : relation.get_rows()) {
-    if (predicate(tuple, schema)) {
-      rows.insert(tuple);
-    }
-  }
+  for (const auto &tuple : relation.tuples())
+    if (predicate(tuple, relation.schema()))
+      out.insert_row(tuple);
 
-  return Relation(relation.get_name(), std::move(rows), std::move(schema));
+  return out;
 }
 
-Relation Algebra::projection(const Relation &relation,
-                             std::initializer_list<std::string> attributes) {
-  AttributeNames new_schema;
-
-  const auto schema = relation.get_schema();
+Relation Algebra::projection(
+    const Relation &relation,
+    const std::vector<std::string> &attributes) {
+  const Schema &schema = relation.schema();
+  const auto &old_columns = schema.columns();
+  std::vector<std::size_t> indexes;
+  std::vector<Column> new_columns;
+  indexes.reserve(attributes.size());
+  new_columns.reserve(attributes.size());
 
   for (const std::string &attribute : attributes) {
-    auto attr = schema.find(attribute);
-
-    if (attr == schema.end()) {
+    const std::size_t index = schema.index_of(attribute);
+    if (index == Schema::npos)
       throw std::runtime_error("UNKNOWN ATTRIBUTE");
-    }
 
-    new_schema[attribute] = {static_cast<int>(new_schema.size()),
-                             attr->second.type};
+    indexes.push_back(index);
+    new_columns.push_back(old_columns[index]);
   }
 
-  std::set<Tuple> rows;
-  for (const auto &tuple : relation.get_rows()) {
+  Relation out(relation.name(), Schema(std::move(new_columns)));
+
+  for (const auto &tuple : relation.tuples()) {
     Tuple new_tuple;
-    new_tuple.reserve(attributes.size());
-    for (const std::string &attribute : attributes) {
-      const auto &attr = schema.at(attribute);
-      new_tuple.push_back(tuple.at(attr.index));
-    }
-    rows.insert(std::move(new_tuple));
+    new_tuple.reserve(indexes.size());
+    for (const std::size_t index : indexes)
+      new_tuple.push_back(tuple[index]);
+
+    out.insert_row(new_tuple);
   }
 
-  return Relation(relation.get_name(), std::move(rows), std::move(new_schema));
+  return out;
 }
 
 Relation Algebra::rename(const Relation &relation, std::string new_name) {
-  auto rows = relation.get_rows();
-  auto schema = relation.get_schema();
-  return Relation(std::move(new_name), std::move(rows), std::move(schema));
+  Relation out(std::move(new_name), relation.schema());
+
+  for (const auto &tuple : relation.tuples())
+    out.insert_row(tuple);
+
+  return out;
 }
 
 Relation Algebra::rename(const Relation &relation, std::string old_attr,
                          std::string new_attr) {
-  AttributeNames new_schema = relation.get_schema();
+  const Schema &schema = relation.schema();
+  const std::size_t index = schema.index_of(old_attr);
 
-  auto old_attribute = new_schema.find(old_attr);
-
-  if (old_attribute == new_schema.end()) {
+  if (index == Schema::npos)
     throw std::runtime_error("UNKNOWN ATTRIBUTE: " + old_attr);
-  }
 
-  if (old_attr != new_attr && new_schema.find(new_attr) != new_schema.end()) {
+  const std::size_t existing_index = schema.index_of(new_attr);
+  if (existing_index != Schema::npos && existing_index != index)
     throw std::runtime_error("ATTRIBUTE ALREADY EXISTS: " + new_attr);
-  }
 
-  new_schema[new_attr] = old_attribute->second;
-  new_schema.erase(old_attr);
+  std::vector<Column> new_columns = schema.columns();
+  new_columns[index] = {.name = std::move(new_attr),
+                        .type = schema.columns()[index].type};
 
-  auto rows = relation.get_rows();
-  return Relation(relation.get_name(), std::move(rows), std::move(new_schema));
+  Relation out(relation.name(), Schema(std::move(new_columns)));
+
+  for (const auto &tuple : relation.tuples())
+    out.insert_row(tuple);
+
+  return out;
 }
 
 Relation Algebra::times(const Relation &rel_1, const Relation &rel_2,
                         std::string modifier) {
-  AttributeNames attribute_names;
-  const auto schema_1 = rel_1.get_schema();
-  const auto schema_2 = rel_2.get_schema();
-  const auto name_1 = rel_1.get_name();
-  const auto name_2 = rel_2.get_name();
+  std::vector<Column> columns;
 
-  int length_of_attrs_1 = 0;
-  for (const auto &attr : schema_1) {
-    length_of_attrs_1++;
-    attribute_names[name_1 + "." + attr.first] = attr.second;
-  }
+  for (const auto &column : rel_1.schema().columns())
+    columns.push_back(
+        {.name = rel_1.name() + "." + column.name, .type = column.type});
 
-  for (const auto &attr : schema_2) {
-    attribute_names[name_2 + "." + attr.first] = {.index = attr.second.index +
-                                                           length_of_attrs_1,
-                                                  .type = attr.second.type};
-  }
+  for (const auto &column : rel_2.schema().columns())
+    columns.push_back(
+        {.name = rel_2.name() + "." + column.name, .type = column.type});
 
-  std::set<Tuple> rows;
-  const auto &rows_1 = rel_1.get_rows();
-  const auto &rows_2 = rel_2.get_rows();
-  for (const auto &tuple_1 : rows_1) {
-    for (const auto &tuple_2 : rows_2) {
+  Relation out(rel_1.name() + " " + modifier + " " + rel_2.name(),
+               Schema(std::move(columns)));
+
+  for (const auto &tuple_1 : rel_1.tuples())
+    for (const auto &tuple_2 : rel_2.tuples()) {
       Tuple new_tuple;
       new_tuple.reserve(tuple_1.size() + tuple_2.size());
       new_tuple.insert(new_tuple.end(), tuple_1.begin(), tuple_1.end());
       new_tuple.insert(new_tuple.end(), tuple_2.begin(), tuple_2.end());
-      rows.insert(std::move(new_tuple));
+      out.insert_row(new_tuple);
     }
-  }
 
-  return Relation(name_1 + " " + modifier + " " + name_2, std::move(rows),
-                  std::move(attribute_names));
+  return out;
 }
 
 Relation Algebra::join(const Relation &rel_1, const Relation &rel_2,
-                       std::function<bool(Tuple, AttributeNames)> predicate) {
+                       Predicate predicate) {
   return selection(times(rel_1, rel_2, "JOIN"), predicate);
 }
 
@@ -124,69 +114,54 @@ Relation Algebra::intersect(const Relation &rel_1, const Relation &rel_2) {
   if (!compare_schemas(rel_1, rel_2))
     throw std::runtime_error("SCHEMA'S NOT COMPATIBLE");
 
-  auto rows = rel_1.get_rows();
-  std::set<Tuple> new_rows;
+  Relation out(rel_1.name() + " INTERSECT " + rel_2.name(), rel_1.schema());
 
-  for (const auto &tuple : rows) {
-    if (rel_2.get_rows().find(tuple) != rel_2.get_rows().end()) {
-      new_rows.insert(tuple);
-    }
-  }
+  for (const auto &tuple : rel_1.tuples())
+    if (rel_2.tuples().find(tuple) != rel_2.tuples().end())
+      out.insert_row(tuple);
 
-  return Relation(rel_1.get_name() + " INTERSECT " + rel_2.get_name(),
-                  std::move(new_rows), rel_1.get_schema());
+  return out;
 }
 
 Relation Algebra::minus(const Relation &rel_1, const Relation &rel_2) {
   if (!compare_schemas(rel_1, rel_2))
     throw std::runtime_error("SCHEMA'S NOT COMPATIBLE");
 
-  auto rows = rel_1.get_rows();
-  std::set<Tuple> new_rows;
+  Relation out(rel_1.name() + " MINUS " + rel_2.name(), rel_1.schema());
 
-  for (const auto &tuple : rows) {
-    if (rel_2.get_rows().find(tuple) == rel_2.get_rows().end()) {
-      new_rows.insert(tuple);
-    }
-  }
+  for (const auto &tuple : rel_1.tuples())
+    if (rel_2.tuples().find(tuple) == rel_2.tuples().end())
+      out.insert_row(tuple);
 
-  return Relation(rel_1.get_name() + " MINUS " + rel_2.get_name(),
-                  std::move(new_rows), rel_1.get_schema());
+  return out;
 }
 
 Relation Algebra::onion(const Relation &rel_1, const Relation &rel_2) {
   if (!compare_schemas(rel_1, rel_2))
     throw std::runtime_error("SCHEMA'S NOT COMPATIBLE");
 
-  auto rows = rel_1.get_rows();
-  const auto &rows_2 = rel_2.get_rows();
-  rows.insert(rows_2.begin(), rows_2.end());
+  Relation out(rel_1.name() + " UNION " + rel_2.name(), rel_1.schema());
 
-  return Relation(rel_1.get_name() + " UNION " + rel_2.get_name(),
-                  std::move(rows), rel_1.get_schema());
+  for (const auto &tuple : rel_1.tuples())
+    out.insert_row(tuple);
+
+  for (const auto &tuple : rel_2.tuples())
+    out.insert_row(tuple);
+
+  return out;
 }
 
 bool Algebra::compare_schemas(const Relation &rel_1, const Relation &rel_2) {
-  const auto schema_1 = rel_1.get_schema();
-  const auto schema_2 = rel_2.get_schema();
+  const Schema &schema_1 = rel_1.schema();
+  const Schema &schema_2 = rel_2.schema();
 
-  if (schema_1.size() != schema_2.size()) {
+  if (schema_1.columns().size() != schema_2.columns().size())
     return false;
-  }
 
-  for (const auto &[name, attr_1] : schema_1) {
-    const auto it = schema_2.find(name);
-
-    if (it == schema_2.end()) {
+  for (std::size_t i{}; i < schema_1.columns().size(); ++i)
+    if (schema_1.columns()[i].name != schema_2.columns()[i].name ||
+        schema_1.columns()[i].type != schema_2.columns()[i].type)
       return false;
-    }
-
-    const auto &attr_2 = it->second;
-
-    if (attr_1.index != attr_2.index || attr_1.type != attr_2.type) {
-      return false;
-    }
-  }
 
   return true;
 }

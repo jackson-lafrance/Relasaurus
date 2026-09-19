@@ -1,75 +1,130 @@
 #include "algebra.h"
-#include "relations.h"
-#include <iostream>
+#include <cassert>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 
-bool condition(Tuple tuple, AttributeNames schema) {
-  return std::get<int>(tuple[schema["Grade"].index]) > 80;
+Tuple student_row(std::string name, double grade, double id) {
+  return {std::move(name), grade, id};
 }
 
-bool join_condition(Tuple tuple, AttributeNames schema) {
-  return std::get<int>(tuple[schema["students.Grade"].index]) > 80;
+Tuple monkey_row(std::string species, double id, std::string fruit) {
+  return {std::move(species), id, std::move(fruit)};
+}
+
+Predicate grade_above_80(const Schema &schema) {
+  const std::size_t grade_index = schema.index_of("Grade");
+
+  return [grade_index](const Tuple &tuple, const Schema &) {
+    return grade_index != Schema::npos &&
+           std::get<double>(tuple.at(grade_index)) > 80.0;
+  };
+}
+
+Predicate matching_high_grade(const Schema &student_schema,
+                               const Schema &monkey_schema) {
+  const std::size_t grade_index = student_schema.index_of("Grade");
+  const std::size_t student_id_index = student_schema.index_of("ID");
+  const std::size_t monkey_source_index = monkey_schema.index_of("ID");
+  const std::size_t monkey_id_index =
+      monkey_source_index == Schema::npos
+          ? Schema::npos
+          : student_schema.columns().size() + monkey_source_index;
+
+  return [grade_index, student_id_index,
+          monkey_id_index](const Tuple &tuple, const Schema &) {
+    return grade_index != Schema::npos &&
+           student_id_index != Schema::npos &&
+           monkey_id_index != Schema::npos &&
+           std::get<double>(tuple.at(grade_index)) > 80.0 &&
+           std::get<double>(tuple.at(student_id_index)) ==
+               std::get<double>(tuple.at(monkey_id_index));
+  };
 }
 
 int main() {
-  AttributeNames attr1 = {
-      {"Name", {0, STRING}}, {"Grade", {1, INTEGER}}, {"ID", {2, INTEGER}}};
+  Schema student_schema({
+      {"Name", STRING}, {"Grade", NUMBER}, {"ID", NUMBER}});
+  Schema monkey_schema({
+      {"Species", STRING}, {"ID", NUMBER}, {"Fruit", STRING}});
 
-  std::set<Tuple> tuples1 = {
-      {"Bobby", 99, 1}, {"Selsabeel", 88, 2}, {"Moses", 77, 3}};
-  Relation relation1("students", std::move(tuples1), attr1);
+  assert(student_schema.index_of("Name") == 0);
+  assert(student_schema.index_of("Missing") == Schema::npos);
 
-  AttributeNames attr2 = {
-      {"Species", {0, STRING}}, {"ID", {1, INTEGER}}, {"Fruit", {2, STRING}}};
+  Relation students("students", student_schema);
+  students.insert_row(student_row("Bobby", 99.0, 1.0));
+  students.insert_row(student_row("Selsabeel", 88.0, 2.0));
+  students.insert_row(student_row("Moses", 77.0, 3.0));
 
-  std::set<Tuple> tuples2 = {
-      {"chimp", 1, "banana"},
-      {"orangutan", 2, "watermelon"},
-      {"ape", 3, "coconut"},
-  };
-  Relation relation2("monkey", std::move(tuples2), attr2);
+  Relation monkeys("monkey", monkey_schema);
+  monkeys.insert_row(monkey_row("chimp", 1.0, "banana"));
+  monkeys.insert_row(monkey_row("orangutan", 2.0, "watermelon"));
+  monkeys.insert_row(monkey_row("ape", 3.0, "coconut"));
 
-  std::set<Tuple> tuples3 = {
-      {"Ann", 99, 1}, {"Soonwoo", 88, 2}, {"Moses", 77, 3}};
-  Relation relation3("other students", std::move(tuples3), attr1);
+  Relation other_students("other students", student_schema);
+  other_students.insert_row(student_row("Ann", 99.0, 1.0));
+  other_students.insert_row(student_row("Soonwoo", 88.0, 2.0));
+  other_students.insert_row(student_row("Moses", 77.0, 3.0));
 
-  std::cout << std::endl << "Relation test" << std::endl;
-  std::cout << relation1.toString() << std::endl;
-  std::cout << relation2.toString() << std::endl;
-  std::cout << relation3.toString() << std::endl;
+  assert(students.tuples().size() == 3);
 
-  std::cout << std::endl << "Selection test grade > 80" << std::endl;
-  std::cout << Algebra::selection(relation1, condition).toString();
+  const Relation selected =
+      Algebra::selection(students, grade_above_80(students.schema()));
+  assert(selected.name() == "students");
+  assert(selected.tuples().size() == 2);
 
-  std::cout << std::endl << "Projection test name and id" << std::endl;
-  std::cout << Algebra::projection(relation1, {"Name", "ID"}).toString();
+  const Relation projected =
+      Algebra::projection(students, std::vector<std::string>{"Name", "ID"});
+  assert(projected.schema().columns().size() == 2);
+  assert(projected.schema().columns()[0].name == "Name");
+  assert(projected.schema().columns()[1].name == "ID");
+  assert(projected.tuples().size() == 3);
 
-  std::cout << std::endl
-            << "Projection and Selection test grade > 80 and name and id"
-            << std::endl;
-  std::cout << Algebra::projection(Algebra::selection(relation1, condition),
-                                   {"Name", "ID"})
-                   .toString();
+  const Relation selected_projected = Algebra::projection(
+      selected, std::vector<std::string>{"Name", "ID"});
+  assert(selected_projected.tuples().size() == 2);
 
-  std::cout << std::endl << "Rename attribute test" << std::endl;
-  std::cout << Algebra::rename(relation1, "Name", "SOONWOO").toString();
+  const Relation renamed_attribute =
+      Algebra::rename(students, "Grade", "Score");
+  assert(renamed_attribute.schema().index_of("Grade") == Schema::npos);
+  assert(renamed_attribute.schema().index_of("Score") == 1);
+  assert(renamed_attribute.schema().columns()[1].type == NUMBER);
 
-  std::cout << std::endl << "Rename relation test" << std::endl;
-  std::cout << Algebra::rename(relation1, "SOONWOO").toString();
+  const Relation renamed_relation = Algebra::rename(students, "pupils");
+  assert(renamed_relation.name() == "pupils");
+  assert(renamed_relation.tuples().size() == students.tuples().size());
 
-  std::cout << std::endl << "Times test" << std::endl;
-  std::cout << Algebra::times(relation1, relation2).toString();
+  const Relation product = Algebra::times(students, monkeys);
+  assert(product.name() == "students TIMES monkey");
+  assert(product.tuples().size() == 9);
+  assert(product.schema().index_of("students.Name") == 0);
+  assert(product.schema().index_of("monkey.Species") == 3);
+  assert(product.schema().index_of("monkey.Fruit") == 5);
 
-  std::cout << std::endl << "Join test grade > 80" << std::endl;
-  std::cout << Algebra::join(relation1, relation2, join_condition).toString();
+  const Relation joined =
+      Algebra::join(students, monkeys,
+                    matching_high_grade(students.schema(), monkeys.schema()));
+  assert(joined.name() == "students JOIN monkey");
+  assert(joined.tuples().size() == 2);
 
-  std::cout << std::endl << "Onion test" << std::endl;
-  std::cout << Algebra::onion(relation1, relation3).toString();
+  const Relation unioned = Algebra::onion(students, other_students);
+  assert(unioned.name() == "students UNION other students");
+  assert(unioned.tuples().size() == 5);
 
-  std::cout << std::endl << "Intersect test" << std::endl;
-  std::cout << Algebra::intersect(relation1, relation3).toString();
+  const Relation intersected = Algebra::intersect(students, other_students);
+  assert(intersected.tuples().size() == 1);
 
-  std::cout << std::endl << "Minus test" << std::endl;
-  std::cout << Algebra::minus(relation1, relation3).toString();
+  const Relation difference = Algebra::minus(students, other_students);
+  assert(difference.tuples().size() == 2);
+
+  bool threw = false;
+  try {
+    Algebra::projection(students, std::vector<std::string>{"Missing"});
+  } catch (const std::runtime_error &) {
+    threw = true;
+  }
+  assert(threw);
 
   return 0;
 }

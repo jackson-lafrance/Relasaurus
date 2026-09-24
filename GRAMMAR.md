@@ -9,70 +9,172 @@ Strings can be written without quotes, but quotes are needed if you want to incl
 - a parantheses (()),
 - a brace ({}),
 - a single quote character*  ('') (have to use two single quotes right next to eachother to represent one)
+- a comment character /* or */
+- any binary, unary, or relation defintion/insertion keywords
 
-Newlines are also ignored, except when completing an operation, where once a period (.) is inserted, newline will submit the query up to that point and cut off any following text
+In tuple-value context, an identifier token represents a bare string
+In condition context, an identifier token represents an attribute reference so string constants in conditions must be quoted.
+A string that looks numeric must also be quoted.
+
+Newlines are also not allowed within strings and ignored elsewhere
+To complete an operation, insert a semicolon (;) at the end of your statement (outside of a list of tuples for a relation definition)
 Comments are any text wrapped between /* and */, their contents are ignored when the query/relation is executed
 
 ## 5.1.1 Relation definitions
-A relation contains a name, a schema (list of attributes which are name + index + type (STRING or NUMBER)), and a list of tuples (which follow the schema)
-Relations can be defined with or without defaults values
+A relation contains a name, a schema (list of attributes where order matters which are name + type (string or number)), and a list of tuples (which follow the schema)
+Relations can be defined with or without initial tuples
 Since relations are sets duplicate tuples get ignored
 
-### Without any values
+### Without any tuples
 ```cpp
-Herbavoires (DID = NUMBER, Species = STRING, Extinct = NUMBER, Height = NUMBER, Name = STRING) = {}.
+relation Herbavoires (DID = number, Species = string, Extinct = number, Height = number, Name = string,) {};
 ```
 
 
 ### With tuples
 ```cpp
-Herbavoires (DID = NUMBER, Species = STRING, Extinct = NUMBER, Height = NUMBER, Name = STRING) = {
+relation Herbavoires (DID = number, Species = string, Extinct = number, Height = number, Name = string,) {
     1, Tricerotops, 1, 6.2, Tom;
     1, Tricerotops, 1, 6.2, Tom;
-    // Cool comment
+    /* Cool comment */
     2, Brachiosaurus, 1, 5.5, Michael; 
     3, 'Brown Chicken', 0, 1.2, Colin;
-}.
+};
 ```
 
 The relation definitions above gets compacted down to the one below once whitespaces, comments, duplicates, and extra newlines are ignored
 
 ### Without any values
 ```cpp
-Herbavoires(DID=NUMBER,Species=STRING,Extinct=NUMBER,Height=NUMBER,Name=STRING)={}.
+relation Herbavoires(DID=number,Species=string,Extinct=number,Height=number,Name=string,){};
 ```
 
 ### With tuples
 ```cpp
-Herbavoires(DID=NUMBER,Species=STRING,Extinct=NUMBER,Height=NUMBER,Name=STRING)={1,Tricerotops,1,6.2,Tom;2,Brachiosaurus,1,5.5,Michael;3,'Brown Chicken',0,1.2,Colin;}.
+relation Herbavoires(DID=number,Species=string,Extinct=number,Height=number,Name=string,){1,Tricerotops,1,6.2,Tom;2,Brachiosaurus,1,5.5,Michael;3,'Brown Chicken',0,1.2,Colin;};
+```
+
+to add additional tuples to a relation, use the following syntax
+```cpp
+insert Herbavoires {
+    1, Tricerotops, 1, 6.2, Tom;
+    3, Pterodactyl, 2, 20, Bob;
+};
 ```
 
 ## 5.1.2
 The following REX (Relational Expressions) are possible to make in your queries.  A REX is either a relation itself or an expression that returns a relation
 
 ### Unary
-select{<condition>}(<REX>) -> returns a relation, with the the same schema as the input relation, but only the tuples witch match the condition 
-project{<attribute-list>}(<REX>) -> returns a relation, with the the same tuples as the input relation, but only the attributes specified by the attribute list 
-rename{<new-relation-name>](<REX>) -> returns a relation, with the the same attributes and tuples as the input relation, but with a new relation name
-rename{<new-attribute-name>, <old-attribute-name>}(<REX>) -> returns a relation, with the the tuples as the input relation, but with one attribute's name changed (and only its name)
+select{<condition>}(<REX>) -> returns a relation, with the the same schema as the input relation, but only the tuples witch match the condition (conditions with strings in them must be quoted i.e Name='Tom' not Name=Tom)
+project{<attribute-list>}(<REX>) -> returns a relation, with the the same tuples (besides dupes that collapse) as the input relation, but only the attributes specified by the attribute list, duplicates of the same attribute collapse to one
+renameTable{<new-relation-name>}(<REX>) -> returns a relation, with the the same attributes and tuples as the input relation, but with a new relation name
+renameAttribute{<new-attribute-name>, <old-attribute-name>}(<REX>) -> returns a relation, with the the tuples as the input relation, but with one attribute's name changed (and only its name), duplicate attribute names are disallowed
 
 ### Binary
-(<REX>)union(<REX>) -> returns a relation, with all of the tuples from both input relations (duplicates collapse).  The relations must have the exact same schema
-(<REX>)intersect(<REX>) -> returns a relation, with only the tuples that exist in both input relations.  The relations must have the exact same schema
-(<REX>)minus(<REX>) -> returns a relation, with only the tuples that exist in the first relation but not in the second.  The relations must have the exact same schema
-(<REX>)times(<REX>) -> returns a relation, with the schema of both relations together (A.name, A.colour, B.name, B.type {where A and B are relation names}), and every tuple of each relation matched with every tuple of the other relation
-(<REX>)join{<condition>}(<REX>) -> returns a relation, performs "times" of the two relations, but then filters the rows based on a "select" condition
+<REX>+<REX> -> union, returns a relation, with all of the tuples from both input relations (duplicates collapse).  The relations must have the exact same schema
+<REX>&<REX> -> intersect, returns a relation, with only the tuples that exist in both input relations.  The relations must have the exact same schema
+<REX>-<REX> -> minus, returns a relation, with only the tuples that exist in the first relation but not in the second.  The relations must have the exact same schema
+<REX>*<REX> -> times, returns a relation, with the schema of both relations together (A.name, A.colour, B.name, B.type {where A and B are relation names}), and every tuple of each relation matched with every tuple of the other relation
+<REX>@{<condition>}<REX> -> join, returns a relation, performs "times" of the two relations, but then filters the rows based on a "select" condition
 
 Conditions, attribute names/lists, and relation names are all written in braces {}.
-sub-REXs are always written within parantheses ().
-Relational algebra operations are not case sensitive, SELECT is the same as select is the same as sEleCT
+Parantheses can group REXs to override associativity and precendence
+Relational algebra operations are case insensitive, SELECT is the same as select is the same as sEleCT, but table and attribute names are case sensitive
 
-Conditions are comparisons combined with "AND", "NOT", "OR", and "()".
-A comparison has two operands (which is either a REX or another comparison) and one of the operators '=', '!=', '<', '<=', '>', or '>=' between them.
+Conditions are comparisons combined with "&&" (AND), "!" (NOT), "||" (OR), and "()".
+The order of evaluation of these conditions (not counting parantheses) is "!", then "&&", then "||"
+A comparison has two operands (numbers, strings, and attributes) and one of the operators '=', '!=', '<', '<=', '>', or '>=' between them.
+In a comparison, attributes can be qualified or not qualified by relation name (Herbavoires.Name and Name are the same) 
+*in join queries you must use qualified attribute names based on the input table
+
+## 5.1.3 Lexical conventions
+
+The tokenizer scans the input from left to right, one character at a time. It uses maximal munch: when several tokens share a prefix, it consumes the longest valid token. For example, >= is one token rather than > followed by =, and && is one token rather than
+two & tokens.
+
+Every token records its original text and its starting position in the input. Positions are reported using a zero-based character offset and one-based line and column numbers. The tokenizer also emits an end-of-input token after the final character.
+
+### Whitespace and comments
+
+Spaces, tabs, and newlines are ignored outside quoted strings and newlines are not allowed inside quoted strings
+
+A comment begins with /* and ends at the next */. Reaching the end of the input before finding */ is a lexical error reported at the position of the opening /*
+
+Comment markers appearing inside a quoted string are treated as ordinary string characters.
+
+### Identifiers and keywords
+
+An identifier begins with an ASCII letter and may continue with ASCII letters, digits, or underscores. Identifiers are consumed using maximal munch, so selectValue is one identifier rather than the keyword select followed by the identifier Value.
+
+The reserved words are:
+
+- relation
+- insert
+- select
+- project
+- renameTable
+- renameAttribute
+- string
+- number
+
+Reserved words are recognized case-insensitively. For example, select, SELECT, and sElEcT produce the same keyword token. Relation and attribute names remain case-sensitive, and their original spelling is preserved.
+
+Reserved words cannot be used as relation or attribute names. When a reserved word is intended to be a string value, it must be quoted. Words such as union, intersect, and minus are not reserved because this language represents those operators with symbols, so
+they may be used as identifiers or bare tuple values.
+
+An identifier token has different meanings in different parser contexts. Inside a tuple, it represents a bare string value. Inside a condition, it represents an attribute reference. Therefore, string constants used in conditions must be quoted.
+
+### Numbers
+
+A number consists of an optional leading -, one or more digits, and an optional fractional part containing a period followed by one or more digits.
+
+Examples of valid numbers include 0, 30, -30, 6.2, and -0.5. Forms such as .5, 5., +5, and scientific notation are not part of the language.
+
+When - is immediately followed by a digit, it begins a negative number token. Otherwise, it produces the binary minus token. Therefore, Age>-30 produces the tokens Age, >, and -30, while A-B produces A, -, and B.
+
+A value that looks like a number but is intended to be a string must be quoted.
+
+### Quoted strings
+
+A quoted string begins and ends with a single quote. Characters such as commas, spaces, parentheses, braces, periods, semicolons, operators, and comment markers have no syntactic meaning while inside a quoted string.
+
+Two consecutive single quotes inside a quoted string represent one literal single quote. For example, 'O''Brien' produces the string value O'Brien.
+
+Quoted strings cannot contain newlines. Reaching a newline or the end of the input before finding the closing quote is a lexical error reported at the position of the opening quote.
+
+The quotes are not part of the resulting string value.
+
+### Operators and punctuation
+
+The tokenizer recognizes the following single-character tokens:
+
+- ( and )
+- { and }
+- ,
+- .
+- ;
+- +
+- -
+- *
+- &
+- @
+- =
+- !
+- <
+- >
+
+It also recognizes the following two-character tokens using maximal munch:
+
+- !=
+- <=
+- >=
+- &&
+- ||
 
 # 5.2 Precedence and associativity
 All binary operators have the same precedence
-Everything is left associative so in (A union B minus C), A union B -> X happens, then X minus C happens
+Everything is left associative so in (A+B-C), A+B -> X happens, then X-C happens
 Precedence can be overruled by parantheses, the innermost parantheses are evaluated first, etc. So in (A union (B minus C)), B minus C -> X happens, then A union X happens
 
 # 5.3 An ambiguity demonstration
@@ -111,5 +213,53 @@ My grammar removes the ambiguity because it says the leftmost operation goes fir
 So only the first parse tree and result will happen
 If you want the second one to happen, you have to use parantheses
 
+# EBNF
+
+```cpp
+program = { statement }
+statement = rel_statement | query_statement
+
+rel_statement = rel_definition | rel_insertion
+rel_definition = "relation", ident, "(", schema, ")", "{", { tuple }, "}", ";"
+rel_insertion = "insert", ident, "{", { tuple }, "}", ";"
+
+schema = attribute, { ",", attribute }, [ "," ]
+attribute = ident, "=", type
+type = "string" | "number"
+
+tuple = value, { ",", value }, ";"
+value = num | quote_str | ident
+
+query_statement = rex, ";" 
+rex = primary, { bop }
+bop = ("+" | "&" | "-" | "*"), primary | "@", "{", condition, "}", primary
+primary = ident | "(", rex, ")" | uop
+
+uop = "select", "{", condition, "}", "(", rex, ")" | "project", "{", attribute_list, "}", "(", rex, ")" | "renameTable", "{", ident, "}", "(", rex, ")" | "renameAttribute", "{", ident, ",", ident, "}", "(", rex, ")" ;
+attribute_list = attribute_ref, {",", attribute_ref}
+attribute_ref = ident, [ ".", ident]
+
+condition = or_expr
+or_expr = and_expr, { "||", and_expr }
+and_expr = not_expr, { "&&", not_expr }
+not_expr = "!", not_expr | "(", condition, ")" | comparison
+comparison = operand, cop, operand
+cop = "=" | "!=" | "<" | "<=" | ">" | ">="
+operand = num | quote_str | attribute_ref
+
+digit = "0" | "1" | "2" | "3" | "4"
+      | "5" | "6" | "7" | "8" | "9"
+
+num = [ "-" ], digit, { digit }, [ ".", digit, { digit } ]
+
+quote_str = "'", { character | "''" }, "'"
+letter = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z" |
+    "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
+
+character = letter | digit | " " | "_" | "+" | "-" | "=" | "<" | ">" | "!" | "@" | "#" | "$" | "%" | "^" | "&" | "*" | "(" | ")" | "{" | "}" | "[" | "]" | "|" | ":" | ";" | "," | "." | "?" | "/" | "`" | "~" | ? backslash ? | ? double_quote ?
+
+ident = letter, { letter | digit | "_" }
+```
+
 # 5.4 A parsing strategy justification
-# 5.5 The Grammer Itself
+# 5.5 Sources

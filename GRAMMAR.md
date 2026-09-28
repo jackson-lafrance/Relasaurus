@@ -129,7 +129,7 @@ An identifier token has different meanings in different parser contexts. Inside 
 
 A number consists of an optional leading -, one or more digits, and an optional fractional part containing a period followed by one or more digits.
 
-Examples of valid numbers include 0, 30, -30, 6.2, and -0.5. Forms such as .5, 5., +5, and scientific notation are not part of the language.
+Examples of valid numbers include 0, 30, -30, 6.2, and -0.5. Forms such as .5, +5, and scientific notation are not part of the language.
 
 When - is immediately followed by a digit, it begins a negative number token. Otherwise, it produces the binary minus token. Therefore, Age>-30 produces the tokens Age, >, and -30, while A-B produces A, -, and B.
 

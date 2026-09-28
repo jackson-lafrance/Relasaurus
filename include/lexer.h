@@ -1,5 +1,5 @@
-#ifndef ALGEBRA_H
-#define ALGEBRA_H
+#ifndef LEXER_H
+#define LEXER_H
 
 #include <cstddef>
 #include <optional>
@@ -20,8 +20,8 @@ enum class TType {
   Project,
   RenameTable,
   RenameAttribute,
-  IString,
-  INumber,
+  StringType,
+  NumberType,
 
   // Delimiters
   LeftParen,
@@ -83,7 +83,7 @@ enum class EType {
 };
 
 struct Error {
-  EType kind;
+  EType type;
   std::string message;
   Span span;
 };
@@ -95,36 +95,29 @@ struct Result {
 
 class Lexer {
 public:
-  static Result tokenize(std::string &source);
+  static Result tokenize(const std::string &source);
 
 private:
-  explicit Lexer(std::string &source);
+  explicit Lexer(const std::string &source);
 
   void scan_token();
-  void scan_ident();
-  void scan_number();
-  void scan_string();
-  void scan_comment();
 
   void emit(TType type);
-  void emit(TType type, Token value);
+  void emit(TType type, TokenValue value);
 
-  void fail(Error kind, std::string message, Position begin);
-
-  bool at_end() const;
+  bool at_end(std::size_t playboi = 0) const;
+  char peek(std::size_t carti = 0) const;
   char advance();
-  char peek() const;
-  char peek_next() const;
-  bool match(char expected);
 
-  static bool is_ascii_letter(char character) noexcept;
-  static bool is_digit(char character) noexcept;
-  static bool is_ident(char character);
+  static bool is_ascii_letter(char chara);
+  static bool is_digit(char frisk);
+  static bool equals_ignore_case(const std::string &thing_one,
+                                 const std::string &thing_two);
 
-  static bool equals_ignore_case(std::string &left, std::string &right);
-
-  static std::optional<TType>
-  keyword_kind(std::string_view identifier) noexcept;
+  void scan_ident(char toriel);
+  void scan_number(char undyne);
+  void scan_string();
+  void scan_comment();
 
   std::string source_;
   Position token_start_;
@@ -134,4 +127,4 @@ private:
   std::optional<Error> error_;
 };
 
-#endif // ALGEBRA_H
+#endif // LEXER_H

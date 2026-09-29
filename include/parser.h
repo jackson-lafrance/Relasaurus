@@ -151,13 +151,16 @@ public:
 
 private:
   explicit Parser(std::vector<Token> &tokens);
-  bool check(TType type) const;
-  const Token &consume(TType type, std::string error);
-  bool match(TType);
-  const Token &peek(std::size_t loco = 0) const;
+
+  const Token &peek() const;
   const Token &prev() const;
   const Token &advance();
+
   bool at_end() const;
+  bool check(TType type) const;
+  bool match(TType);
+
+  const Token &consume(TType type, std::string error);
 
   Program parse_program();
 

@@ -3,11 +3,18 @@
 
 #include "relation.h"
 #include "schema.h"
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <vector>
 
-using Predicate = std::function<bool(const Tuple &, const Schema &, const std::string &)>;
+using Predicate =
+    std::function<bool(const Tuple &, const Schema &, const std::string &)>;
+
+struct OperationStats {
+  std::uint64_t join_comparisons{0};
+  std::uint64_t selection_examinations{0};
+};
 
 class Algebra {
 public:
@@ -22,7 +29,7 @@ public:
   static Relation times(const Relation &rel_1, const Relation &rel_2,
                         std::string modifier = "TIMES");
   static Relation join(const Relation &rel_1, const Relation &rel_2,
-                       Predicate predicate);
+                       Predicate predicate, OperationStats *stats = nullptr);
 
   static Relation onion(const Relation &rel_1, const Relation &rel_2);
   static Relation intersect(const Relation &rel_1, const Relation &rel_2);

@@ -3,6 +3,9 @@
 
 #include "parser.h"
 #include "relation.h"
+#include <optional>
+#include <string>
+#include <unordered_map>
 
 class Interpreter {
 public:
@@ -15,7 +18,7 @@ private:
                  const Schema &schema, const std::string &relation_name);
 
   Value eval_oppa(const Operand &operand, const Tuple &tuple,
-                         const Schema &schema, const std::string &relation_name);
+                  const Schema &schema, const std::string &relation_name);
 
   std::unordered_map<std::string, Relation> relations_;
 };

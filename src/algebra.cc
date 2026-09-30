@@ -6,7 +6,7 @@ Relation Algebra::selection(const Relation &relation, Predicate predicate) {
   Relation out(relation.name(), relation.schema());
 
   for (const auto &tuple : relation.tuples())
-    if (predicate(tuple, relation.schema()))
+    if (predicate(tuple, relation.schema(), relation.name()))
       out.insert_row(tuple);
 
   return out;
@@ -106,8 +106,40 @@ Relation Algebra::times(const Relation &rel_1, const Relation &rel_2,
 }
 
 Relation Algebra::join(const Relation &rel_1, const Relation &rel_2,
-                       Predicate predicate) {
-  return selection(times(rel_1, rel_2, "JOIN"), predicate);
+                       Predicate predicate, OperationStats *stats) {
+  std::vector<Column> columns;
+  columns.reserve(rel_1.schema().columns().size() +
+                  rel_2.schema().columns().size());
+
+  for (const Column &column : rel_1.schema().columns()) {
+    columns.push_back(
+        {.name = rel_1.name() + "." + column.name, .type = column.type});
+  }
+
+  for (const Column &column : rel_2.schema().columns()) {
+    columns.push_back(
+        {.name = rel_2.name() + "." + column.name, .type = column.type});
+  }
+
+  Relation output(rel_1.name() + " JOIN " + rel_2.name(),
+                  Schema(std::move(columns)));
+
+  for (const Tuple &left_tuple : rel_1.tuples()) {
+    for (const Tuple &right_tuple : rel_2.tuples()) {
+      if (stats != nullptr)
+        ++stats->join_comparisons;
+
+      Tuple combined;
+      combined.reserve(left_tuple.size() + right_tuple.size());
+      combined.insert(combined.end(), left_tuple.begin(), left_tuple.end());
+      combined.insert(combined.end(), right_tuple.begin(), right_tuple.end());
+
+      if (predicate(combined, output.schema(), output.name()))
+        output.insert_row(combined);
+    }
+  }
+
+  return output;
 }
 
 Relation Algebra::intersect(const Relation &rel_1, const Relation &rel_2) {

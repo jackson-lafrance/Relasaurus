@@ -201,11 +201,11 @@ bool Interpreter::eval_cond(const Condition &condition, const Tuple &tuple,
     if (logical_condition->king_von == LogicalOperator::And) {
       return eval_cond(*logical_condition->left, tuple, schema,
                        relation_name) &&
-             eval_cond(*logical_condition->left, tuple, schema, relation_name);
+             eval_cond(*logical_condition->right, tuple, schema, relation_name);
     } else if (logical_condition->king_von == LogicalOperator::Or) {
       return eval_cond(*logical_condition->left, tuple, schema,
                        relation_name) ||
-             eval_cond(*logical_condition->left, tuple, schema, relation_name);
+             eval_cond(*logical_condition->right, tuple, schema, relation_name);
     }
 
     throw std::logic_error("UNKNOWN LOGIC OPERATOR!!");

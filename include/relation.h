@@ -4,6 +4,7 @@
 #include "schema.h"
 #include <cstddef>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -24,9 +25,12 @@ private:
 
   static bool values_equal(const Value &left, const Value &right);
   static bool tuples_equal(const Tuple &left, const Tuple &right);
+  static std::size_t hash_value(const Value &value);
+  static std::size_t hash_tuple(const Tuple &tuple);
   void insert_unique(const Tuple &tuple);
 
   std::vector<Tuple> tuples_;
+  std::unordered_map<std::size_t, std::vector<std::size_t>> buckets_;
 };
 
 class Relation {

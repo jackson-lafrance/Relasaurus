@@ -1,5 +1,6 @@
 #include "relation.h"
 #include "schema.h"
+#include <functional>
 #include <stdexcept>
 #include <utility>
 
@@ -24,17 +25,53 @@ bool TupleCollection::tuples_equal(const Tuple &left, const Tuple &right) {
   return true;
 }
 
+std::size_t TupleCollection::hash_value(const Value &value) {
+  constexpr std::size_t hash_magic = 0x9e3779b9;
+  const std::size_t item_hash =
+      std::holds_alternative<double>(value)
+          ? std::hash<double>{}(std::get<double>(value))
+          : std::hash<std::string>{}(std::get<std::string>(value));
+  const std::size_t type_hash = value.index();
+
+  return type_hash ^
+         (item_hash + hash_magic + (type_hash << 6) + (type_hash >> 2));
+}
+
+std::size_t TupleCollection::hash_tuple(const Tuple &tuple) {
+  constexpr std::size_t hash_magic = 0x9e3779b9;
+  std::size_t hash = tuple.size();
+
+  for (const Value &value : tuple) {
+    const std::size_t item_hash = hash_value(value);
+    hash ^= item_hash + hash_magic + (hash << 6) + (hash >> 2);
+  }
+
+  return hash;
+}
+
 bool TupleCollection::contains(const Tuple &tuple) const {
-  for (const Tuple &existing : tuples_)
-    if (tuples_equal(existing, tuple))
+  const auto bucket = buckets_.find(hash_tuple(tuple));
+  if (bucket == buckets_.end())
+    return false;
+
+  for (const std::size_t index : bucket->second)
+    if (tuples_equal(tuples_[index], tuple))
       return true;
 
   return false;
 }
 
 void TupleCollection::insert_unique(const Tuple &tuple) {
-  if (!contains(tuple))
-    tuples_.push_back(tuple);
+  const std::size_t hash = hash_tuple(tuple);
+  std::vector<std::size_t> &bucket = buckets_[hash];
+
+  for (const std::size_t index : bucket)
+    if (tuples_equal(tuples_[index], tuple))
+      return;
+
+  bucket.reserve(bucket.size() + 1);
+  tuples_.push_back(tuple);
+  bucket.push_back(tuples_.size() - 1);
 }
 
 std::size_t TupleCollection::size() const { return tuples_.size(); }

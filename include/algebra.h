@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-using Predicate = std::function<bool(const Tuple &, const Schema &)>;
+using Predicate = std::function<bool(const Tuple &, const Schema &, const std::string &)>;
 
 class Algebra {
 public:

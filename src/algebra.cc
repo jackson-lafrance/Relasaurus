@@ -1,5 +1,6 @@
 #include "algebra.h"
 #include <stdexcept>
+#include <unordered_map>
 #include <utility>
 
 Relation Algebra::selection(const Relation &relation, Predicate predicate) {
@@ -12,9 +13,8 @@ Relation Algebra::selection(const Relation &relation, Predicate predicate) {
   return out;
 }
 
-Relation Algebra::projection(
-    const Relation &relation,
-    const std::vector<std::string> &attributes) {
+Relation Algebra::projection(const Relation &relation,
+                             const std::vector<std::string> &attributes) {
   const Schema &schema = relation.schema();
   const auto &old_columns = schema.columns();
   std::vector<std::size_t> indexes;
@@ -22,10 +22,18 @@ Relation Algebra::projection(
   indexes.reserve(attributes.size());
   new_columns.reserve(attributes.size());
 
+  std::unordered_map<std::string, int> checker;
+
   for (const std::string &attribute : attributes) {
     const std::size_t index = schema.index_of(attribute);
     if (index == Schema::npos)
       throw std::runtime_error("UNKNOWN ATTRIBUTE");
+
+    if (checker.contains(attribute)) {
+      continue;
+    }
+
+    checker[attribute] = 1;
 
     indexes.push_back(index);
     new_columns.push_back(old_columns[index]);
@@ -81,14 +89,21 @@ Relation Algebra::rename(const Relation &relation, std::string old_attr,
 Relation Algebra::times(const Relation &rel_1, const Relation &rel_2,
                         std::string modifier) {
   std::vector<Column> columns;
+  std::unordered_map<std::string, int> checker;
 
-  for (const auto &column : rel_1.schema().columns())
+  for (const auto &column : rel_1.schema().columns()) {
     columns.push_back(
         {.name = rel_1.name() + "." + column.name, .type = column.type});
+    checker[rel_1.name() + "." + column.name] = 1;
+  }
 
-  for (const auto &column : rel_2.schema().columns())
+  for (const auto &column : rel_2.schema().columns()) {
+    if (checker.contains(rel_2.name() + "." + column.name))
+      throw std::runtime_error("DUPLICATE COLUMNS IN TIMES");
+
     columns.push_back(
         {.name = rel_2.name() + "." + column.name, .type = column.type});
+  }
 
   Relation out(rel_1.name() + " " + modifier + " " + rel_2.name(),
                Schema(std::move(columns)));
@@ -111,12 +126,17 @@ Relation Algebra::join(const Relation &rel_1, const Relation &rel_2,
   columns.reserve(rel_1.schema().columns().size() +
                   rel_2.schema().columns().size());
 
+  std::unordered_map<std::string, int> checker;
+
   for (const Column &column : rel_1.schema().columns()) {
     columns.push_back(
         {.name = rel_1.name() + "." + column.name, .type = column.type});
+    checker[rel_1.name() + "." + column.name] = 1;
   }
 
   for (const Column &column : rel_2.schema().columns()) {
+    if (checker.contains(rel_2.name() + "." + column.name))
+      throw std::runtime_error("DUPLICATE COLUMNS IN TIMES");
     columns.push_back(
         {.name = rel_2.name() + "." + column.name, .type = column.type});
   }

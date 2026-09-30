@@ -127,7 +127,7 @@ An identifier token has different meanings in different parser contexts. Inside 
 
 ### Numbers
 
-A number consists of an optional leading -, one or more digits, and an optional fractional part containing a period followed by one or more digits.
+A number consists of an optional leading -, one or more digits, and an optional fractional part containing a period followed by an arbitrary amount of digits (>= 0)
 
 Examples of valid numbers include 0, 30, -30, 6.2, and -0.5. Forms such as .5, +5, and scientific notation are not part of the language.
 

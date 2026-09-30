@@ -38,7 +38,7 @@ std::optional<Relation> Interpreter::execute(const Statement &statement) {
     auto existing = relations_.find(insertion->name.name);
 
     if (existing == relations_.end()) {
-      throw std::runtime_error("RElATION DOES NOT EXIST: " +
+      throw std::runtime_error("RELATION DOES NOT EXIST: " +
                                insertion->name.name);
     }
 
@@ -64,7 +64,7 @@ Relation Interpreter::evaluate(const REX &expression) {
     const auto existing = relations_.find(name->name);
 
     if (existing == relations_.end()) {
-      throw std::runtime_error("RElATION DOES NOT EXIST: " + name->name);
+      throw std::runtime_error("RELATION DOES NOT EXIST: " + name->name);
     }
 
     return existing->second;
@@ -177,6 +177,10 @@ bool Interpreter::eval_cond(const Condition &condition, const Tuple &tuple,
         eval_oppa(comparison_condition->left, tuple, schema, relation_name);
     const Value right =
         eval_oppa(comparison_condition->right, tuple, schema, relation_name);
+
+    if (left.index() != right.index()) {
+      throw std::runtime_error("OPERAND TYPES DO NOT MATCH");
+    }
 
     switch (comparison_condition->lil_durk) {
     case ComparisonOperator::Equal:

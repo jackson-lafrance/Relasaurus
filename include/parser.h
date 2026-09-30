@@ -116,7 +116,7 @@ struct RenameTableExpression {
 
 struct RenameAttributeExpression {
   NameWithSpan new_name;
-  NameWithSpan old_name;
+  AttributeReference old_name;
   std::unique_ptr<REX> input;
 };
 
@@ -177,7 +177,6 @@ private:
   REX parse_rename_table();
   REX parse_rename_attribute();
 
-  Condition parse_condition();
   Condition parse_or();
   Condition parse_and();
   Condition parse_not();

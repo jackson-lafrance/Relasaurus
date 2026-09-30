@@ -235,7 +235,7 @@ rex = primary, { bop }
 bop = ("+" | "&" | "-" | "*"), primary | "@", "{", condition, "}", primary
 primary = ident | "(", rex, ")" | uop
 
-uop = "select", "{", condition, "}", "(", rex, ")" | "project", "{", attribute_list, "}", "(", rex, ")" | "renameTable", "{", ident, "}", "(", rex, ")" | "renameAttribute", "{", ident, ",", ident, "}", "(", rex, ")" ;
+uop = "select", "{", condition, "}", "(", rex, ")" | "project", "{", attribute_list, "}", "(", rex, ")" | "renameTable", "{", ident, "}", "(", rex, ")" | "renameAttribute", "{", ident, ",", attribute_ref, "}", "(", rex, ")" ;
 attribute_list = attribute_ref, {",", attribute_ref}
 attribute_ref = ident, [ ".", ident]
 

@@ -3,7 +3,7 @@ CXX := c++
 CPPFLAGS := -Iinclude
 CXXFLAGS := -std=c++20 -Wall -Wextra -Wpedantic -MMD -MP
 
-SOURCES := src/algebra.cc src/relation.cc src/schema.cc src/lexer.cc
+SOURCES := src/algebra.cc src/relation.cc src/schema.cc src/lexer.cc src/parser.cc
 OBJECTS := $(SOURCES:src/%.cc=build/%.o)
 
 TEST_SOURCES := test/algebra_test.cc test/lexer_test.cc

@@ -179,7 +179,11 @@ bool Interpreter::eval_cond(const Condition &condition, const Tuple &tuple,
         eval_oppa(comparison_condition->right, tuple, schema, relation_name);
 
     if (left.index() != right.index()) {
-      throw std::runtime_error("OPERAND TYPES DO NOT MATCH");
+      throw std::runtime_error(
+          std::string("CANNOT COMPARE ") +
+          (std::holds_alternative<double>(left) ? "NUMBER" : "STRING") +
+          " TO A " +
+          (std::holds_alternative<double>(right) ? "NUMBER" : "STRING"));
     }
 
     switch (comparison_condition->lil_durk) {

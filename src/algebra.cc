@@ -169,7 +169,7 @@ Relation Algebra::intersect(const Relation &rel_1, const Relation &rel_2) {
   Relation out(rel_1.name() + " INTERSECT " + rel_2.name(), rel_1.schema());
 
   for (const auto &tuple : rel_1.tuples())
-    if (rel_2.tuples().find(tuple) != rel_2.tuples().end())
+    if (rel_2.contains(tuple))
       out.insert_row(tuple);
 
   return out;
@@ -182,7 +182,7 @@ Relation Algebra::minus(const Relation &rel_1, const Relation &rel_2) {
   Relation out(rel_1.name() + " MINUS " + rel_2.name(), rel_1.schema());
 
   for (const auto &tuple : rel_1.tuples())
-    if (rel_2.tuples().find(tuple) == rel_2.tuples().end())
+    if (!rel_2.contains(tuple))
       out.insert_row(tuple);
 
   return out;

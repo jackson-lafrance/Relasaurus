@@ -3,12 +3,18 @@
 #include <unordered_map>
 #include <utility>
 
-Relation Algebra::selection(const Relation &relation, Predicate predicate) {
+Relation Algebra::selection(const Relation &relation, Predicate predicate,
+                            OperationStats *stats) {
   Relation out(relation.name(), relation.schema());
 
-  for (const auto &tuple : relation.tuples())
+  for (const auto &tuple : relation.tuples()) {
+    if (stats != nullptr) {
+      ++stats->selection_examinations;
+    }
+
     if (predicate(tuple, relation.schema(), relation.name()))
       out.insert_row(tuple);
+  }
 
   return out;
 }

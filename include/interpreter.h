@@ -1,6 +1,7 @@
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
 
+#include "algebra.h"
 #include "parser.h"
 #include "relation.h"
 #include <optional>
@@ -10,6 +11,8 @@
 class Interpreter {
 public:
   std::optional<Relation> execute(const Statement &statement);
+
+  const OperationStats &stats() const;
 
 private:
   Relation evaluate(const REX &expression);
@@ -21,6 +24,7 @@ private:
                   const Schema &schema, const std::string &relation_name);
 
   std::unordered_map<std::string, Relation> relations_;
+  OperationStats stats_;
 };
 
 #endif // INTERPRETER_H

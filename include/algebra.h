@@ -18,9 +18,10 @@ struct OperationStats {
 
 class Algebra {
 public:
-  static Relation selection(const Relation &relation, Predicate predicate);
-  static Relation projection(
-      const Relation &relation, const std::vector<std::string> &attributes);
+  static Relation selection(const Relation &relation, Predicate predicate,
+                            OperationStats *stats = nullptr);
+  static Relation projection(const Relation &relation,
+                             const std::vector<std::string> &attributes);
 
   static Relation rename(const Relation &relation, std::string new_name);
   static Relation rename(const Relation &relation, std::string old_name,

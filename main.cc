@@ -169,7 +169,15 @@ void print_tree(const REX &expression, int depth) {
   throw std::logic_error("UNKNOWN EXPRESSION!!!!");
 }
 
-void execute_statement(Interpreter &interpreter, const Statement &statement) {
+void print_stats(const Interpreter &interpreter) {
+  const OperationStats &stats = interpreter.stats();
+  std::cout << "SELECTION EXAMINATIONS: " << stats.selection_examinations
+            << '\n'
+            << "JOIN COMPARISONS: " << stats.join_comparisons << '\n';
+}
+
+void execute_statement(Interpreter &interpreter, const Statement &statement,
+                       bool stats_mode) {
   try {
     if (auto result = interpreter.execute(statement)) {
       print_relation(*result);
@@ -178,6 +186,10 @@ void execute_statement(Interpreter &interpreter, const Statement &statement) {
     }
   } catch (const std::exception &error) {
     std::cerr << "runtime error: " << error.what() << '\n';
+  }
+
+  if (stats_mode && std::holds_alternative<REX>(statement.guy)) {
+    print_stats(interpreter);
   }
 }
 
@@ -194,6 +206,7 @@ int main() {
   std::cout << "Choose a mode:\n"
             << "1) live\n"
             << "2) tree\n"
+            << "3) stats\n"
             << "> " << std::flush;
 
   std::string choice;
@@ -201,12 +214,13 @@ int main() {
     return 0;
   }
 
-  if (choice != "1" && choice != "2") {
+  if (choice != "1" && choice != "2" && choice != "3") {
     std::cerr << "INVALID MODE!!!!\n";
     return 1;
   }
 
   const bool tree_mode = choice == "2";
+  const bool stats_mode = choice == "3";
   Interpreter interpreter;
   std::string source;
   std::string line;
@@ -240,7 +254,7 @@ int main() {
       if (tree_mode) {
         print_statement_tree(parsed.statement);
       } else {
-        execute_statement(interpreter, parsed.statement);
+        execute_statement(interpreter, parsed.statement, stats_mode);
       }
     }
 

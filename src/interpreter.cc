@@ -8,6 +8,8 @@
 #include <variant>
 #include <vector>
 
+const OperationStats &Interpreter::stats() const { return stats_; }
+
 std::optional<Relation> Interpreter::execute(const Statement &statement) {
   if (const auto *definition =
           std::get_if<RelationDefinition>(&statement.guy)) {
@@ -95,22 +97,25 @@ Relation Interpreter::evaluate(const REX &expression) {
     Relation left = evaluate(*join->left);
     Relation right = evaluate(*join->right);
 
-    return Algebra::join(left, right,
-                         [this, join](const Tuple &tuple, const Schema &schema,
-                                      const std::string &relation_name) {
-                           return eval_cond(join->condition, tuple, schema,
-                                            relation_name);
-                         });
+    return Algebra::join(
+        left, right,
+        [this, join](const Tuple &tuple, const Schema &schema,
+                     const std::string &relation_name) {
+          return eval_cond(join->condition, tuple, schema, relation_name);
+        },
+        &stats_);
   }
 
   if (const auto *selection = std::get_if<SelectExpression>(&expression.node)) {
     Relation input = evaluate(*selection->input);
 
     return Algebra::selection(
-        input, [this, selection](const Tuple &tuple, const Schema &schema,
-                                 const std::string &relation_name) {
+        input,
+        [this, selection](const Tuple &tuple, const Schema &schema,
+                          const std::string &relation_name) {
           return eval_cond(selection->condition, tuple, schema, relation_name);
-        });
+        },
+        &stats_);
   }
 
   if (const auto *projection =

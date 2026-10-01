@@ -179,7 +179,6 @@ Precedence can be overruled by parantheses, the innermost parantheses are evalua
 
 A little cheat sheet follows
 | Domain | Level | Operators or forms | Associativity | Enforcing grammar rule |
-|---|---:|---|---|---|
 | Relational | 2 | `select`, `project`, `renameTable`, `renameAttribute` | Not applicable; their operands are explicitly delimited | `primary = ident \| "(" rex ")" \| uop` |
 | Relational | 1 | `+`, `&`, `-`, `*`, `@{condition}` | Left | `rex = primary, { bop }` |
 | Condition | 4 | `=`, `!=`, `<`, `<=`, `>`, `>=` | Non-associative | `comparison = operand, cop, operand` |

@@ -51,7 +51,8 @@ struct AlgebraFixture {
 Predicate grade_above_80(const Schema &schema) {
   const std::size_t grade_index = schema.index_of("Grade");
 
-  return [grade_index](const Tuple &tuple, const Schema &) {
+  return [grade_index](const Tuple &tuple, const Schema &,
+                       const std::string &) {
     return grade_index != Schema::npos &&
            std::get<double>(tuple.at(grade_index)) > 80.0;
   };
@@ -68,7 +69,8 @@ Predicate matching_high_grade(const Schema &student_schema,
           : student_schema.columns().size() + monkey_source_index;
 
   return [grade_index, student_id_index,
-          monkey_id_index](const Tuple &tuple, const Schema &) {
+          monkey_id_index](const Tuple &tuple, const Schema &,
+                           const std::string &) {
     return grade_index != Schema::npos &&
            student_id_index != Schema::npos &&
            monkey_id_index != Schema::npos &&

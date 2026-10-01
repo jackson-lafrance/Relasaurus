@@ -3,14 +3,15 @@
 #include "schema.h"
 #include <cctype>
 
-std::variant<Program, ParseError>
+std::variant<Statement, ParseError>
 Parser::parse_tokens(std::vector<Token> &tokens) {
   Parser parser(tokens);
 
   try {
-    Program program = parser.parse_program();
-
-    return std::move(program);
+    Statement statement = parser.parse_statement();
+    parser.consume(TType::EndOfInput,
+                   "EXPECTED END OF INPUT AFTER STATEMENT!!!!");
+    return std::move(statement);
   } catch (ParseError error) {
     return std::move(error);
   }
@@ -45,16 +46,6 @@ const Token &Parser::consume(TType type, std::string error) {
     return advance();
 
   fail(peek(), type, std::move(error));
-}
-
-Program Parser::parse_program() {
-  Program program;
-
-  while (!at_end()) {
-    program.statements.push_back(parse_statement());
-  }
-
-  return program;
 }
 
 Statement Parser::parse_statement() {

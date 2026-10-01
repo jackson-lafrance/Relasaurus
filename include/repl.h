@@ -9,7 +9,7 @@ enum class ParseStatus { Success, Incomplete, Error };
 
 struct ParsedInput {
   ParseStatus status;
-  Program program;
+  Statement statement;
 };
 
 ParsedInput parse_repl_source(const std::string &source);

@@ -133,10 +133,6 @@ struct Statement {
   Span span;
 };
 
-struct Program {
-  std::vector<Statement> statements;
-};
-
 struct ParseError {
   std::string message;
   Span span;
@@ -146,7 +142,7 @@ struct ParseError {
 
 class Parser {
 public:
-  static std::variant<Program, ParseError>
+  static std::variant<Statement, ParseError>
   parse_tokens(std::vector<Token> &tokens);
 
 private:
@@ -161,8 +157,6 @@ private:
   bool match(TType);
 
   const Token &consume(TType type, std::string error);
-
-  Program parse_program();
 
   Statement parse_statement();
 

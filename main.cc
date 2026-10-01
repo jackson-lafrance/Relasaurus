@@ -60,7 +60,7 @@ std::string comparison_text(ComparisonOperator operation) {
   case ComparisonOperator::GreaterEqual:
     return ">=";
   }
-  throw std::logic_error("UNKNOWN COMPARISON OPERATOR!!");
+  throw std::logic_error("UNKNOWN COMPARISON OPERATOR!!!!");
 }
 
 std::string condition_text(const Condition &condition) {
@@ -94,7 +94,7 @@ std::string binary_name(BinaryOperator operation) {
   case BinaryOperator::TIMES:
     return "Times";
   }
-  throw std::logic_error("UNKNOWN BINARY OPERATOR!!");
+  throw std::logic_error("UNKNOWN BINARY OPERATOR!!!!");
 }
 
 std::string attributes_text(
@@ -166,38 +166,28 @@ void print_tree(const REX &expression, int depth) {
     return;
   }
 
-  throw std::logic_error("unknown expression");
+  throw std::logic_error("UNKNOWN EXPRESSION!!!!");
 }
 
-void execute_program(Interpreter &interpreter, const Program &program) {
-  bool printed = false;
-
+void execute_statement(Interpreter &interpreter, const Statement &statement) {
   try {
-    for (const Statement &statement : program.statements) {
-      if (auto result = interpreter.execute(statement)) {
-        print_relation(*result);
-        printed = true;
-      }
+    if (auto result = interpreter.execute(statement)) {
+      print_relation(*result);
+    } else {
+      std::cout << "OK\n";
     }
   } catch (const std::exception &error) {
     std::cerr << "runtime error: " << error.what() << '\n';
-    return;
-  }
-
-  if (!printed) {
-    std::cout << "OK\n";
   }
 }
 
-void print_program_trees(const Program &program) {
-  for (const Statement &statement : program.statements) {
-    const auto *query = std::get_if<REX>(&statement.guy);
-    if (query == nullptr) {
-      std::cerr << "tree error: expected a query statement\n";
-      return;
-    }
-    print_tree(*query, 0);
+void print_statement_tree(const Statement &statement) {
+  const auto *query = std::get_if<REX>(&statement.guy);
+  if (query == nullptr) {
+    std::cerr << "TREE ERROR: EXPECTED A QUERY STATEMENT!!!!\n";
+    return;
   }
+  print_tree(*query, 0);
 }
 
 int main() {
@@ -212,7 +202,7 @@ int main() {
   }
 
   if (choice != "1" && choice != "2") {
-    std::cerr << "invalid mode\n";
+    std::cerr << "INVALID MODE!!!!\n";
     return 1;
   }
 
@@ -226,7 +216,7 @@ int main() {
 
     if (!std::getline(std::cin, line)) {
       if (!source.empty()) {
-        std::cerr << "syntax error: incomplete input at end of file\n";
+        std::cerr << "SYNTAX ERROR: INCOMPLETE INPUT AT END OF FILE!!!!\n";
       }
       break;
     }
@@ -248,9 +238,9 @@ int main() {
 
     if (parsed.status == ParseStatus::Success) {
       if (tree_mode) {
-        print_program_trees(parsed.program);
+        print_statement_tree(parsed.statement);
       } else {
-        execute_program(interpreter, parsed.program);
+        execute_statement(interpreter, parsed.statement);
       }
     }
 

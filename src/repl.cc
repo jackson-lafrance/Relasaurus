@@ -37,25 +37,25 @@ ParsedInput parse_repl_source(const std::string &source) {
 
   if (tokenized.error.has_value()) {
     if (tokenized.error->type == EType::UnterminatedComment) {
-      return {.status = ParseStatus::Incomplete, .program = {}};
+      return {.status = ParseStatus::Incomplete, .statement = {}};
     }
 
     print_diagnostic("lexer error", tokenized.error->message,
                      tokenized.error->span, source);
-    return {.status = ParseStatus::Error, .program = {}};
+    return {.status = ParseStatus::Error, .statement = {}};
   }
 
   auto parsed = Parser::parse_tokens(tokenized.tokens);
 
   if (const auto *error = std::get_if<ParseError>(&parsed)) {
     if (error->actual == TType::EndOfInput) {
-      return {.status = ParseStatus::Incomplete, .program = {}};
+      return {.status = ParseStatus::Incomplete, .statement = {}};
     }
 
     print_diagnostic("syntax error", error->message, error->span, source);
-    return {.status = ParseStatus::Error, .program = {}};
+    return {.status = ParseStatus::Error, .statement = {}};
   }
 
   return {.status = ParseStatus::Success,
-          .program = std::get<Program>(std::move(parsed))};
+          .statement = std::get<Statement>(std::move(parsed))};
 }

@@ -216,7 +216,7 @@ If you want the second one to happen, you have to use parantheses
 # EBNF
 
 ```cpp
-program = { statement }
+input = statement
 statement = rel_statement | query_statement
 
 rel_statement = rel_definition | rel_insertion

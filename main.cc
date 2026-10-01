@@ -1,171 +1,225 @@
 #include "interpreter.h"
-#include "lexer.h"
-#include "parser.h"
-#include <algorithm>
+#include "repl.h"
+
 #include <exception>
 #include <iostream>
+#include <sstream>
+#include <stdexcept>
 #include <string>
-#include <string_view>
 #include <variant>
 
 void print_relation(const Relation &relation) {
-  std::cout << relation.name() << std::endl;
+  std::cout << relation.name() << '\n';
 
   for (const Column &column : relation.schema().columns()) {
     std::cout << column.name << '\t';
   }
-  std::cout << std::endl;
+  std::cout << '\n';
 
   for (const Tuple &tuple : relation.tuples()) {
     for (const Value &value : tuple) {
       std::visit([](const auto &item) { std::cout << item << '\t'; }, value);
     }
-    std::cout << std::endl;
+    std::cout << '\n';
   }
 }
 
-enum class RunStatus { Success, Incomplete, Error };
-
-bool has_final_semicolon(const std::string &source) {
-  int brace_depth = 0;
-  int parenthesis_depth = 0;
-  bool in_string = false;
-  bool in_comment = false;
-  bool unmatched_closer = false;
-  bool last_token_is_semicolon = false;
-
-  for (std::size_t i = 0; i < source.size(); ++i) {
-    const char current = source[i];
-    const char next = i + 1 < source.size() ? source[i + 1] : '\0';
-
-    if (in_comment) {
-      if (current == '*' && next == '/') {
-        in_comment = false;
-        ++i;
-      }
-      continue;
-    }
-
-    if (in_string) {
-      if (current == '\'' && next == '\'') {
-        ++i;
-      } else if (current == '\'') {
-        in_string = false;
-      }
-      continue;
-    }
-
-    if (current == '/' && next == '*') {
-      in_comment = true;
-      ++i;
-      continue;
-    }
-
-    if (current == '\'') {
-      in_string = true;
-      last_token_is_semicolon = false;
-      continue;
-    }
-
-    if (current == ' ' || current == '\t' || current == '\r' ||
-        current == '\n') {
-      continue;
-    }
-
-    last_token_is_semicolon = current == ';';
-
-    if (current == '{') {
-      ++brace_depth;
-    } else if (current == '}') {
-      --brace_depth;
-      unmatched_closer = unmatched_closer || brace_depth < 0;
-    } else if (current == '(') {
-      ++parenthesis_depth;
-    } else if (current == ')') {
-      --parenthesis_depth;
-      unmatched_closer = unmatched_closer || parenthesis_depth < 0;
-    }
+std::string attribute_name(const AttributeReference &attribute) {
+  if (attribute.relation_name.has_value()) {
+    return attribute.relation_name->name + "." + attribute.attribute_name.name;
   }
-
-  const bool delimiters_closed = brace_depth == 0 && parenthesis_depth == 0;
-  return last_token_is_semicolon && !in_string && !in_comment &&
-         (delimiters_closed || unmatched_closer);
+  return attribute.attribute_name.name;
 }
 
-void print_diagnostic(std::string_view category, std::string_view message,
-                      const Span &span, const std::string &source) {
-  std::cerr << category << " at " << span.begin.row << ':' << span.begin.col
-            << ": " << message << '\n';
-
-  const std::size_t offset = std::min(span.begin.offset, source.size());
-  std::size_t line_start = 0;
-  if (offset > 0) {
-    const std::size_t previous_newline = source.rfind('\n', offset - 1);
-    if (previous_newline != std::string::npos) {
-      line_start = previous_newline + 1;
-    }
+std::string operand_text(const Operand &operand) {
+  if (const auto *number = std::get_if<double>(&operand.value)) {
+    std::ostringstream output;
+    output << *number;
+    return output.str();
   }
 
-  const std::size_t next_newline = source.find('\n', offset);
-  const std::size_t line_end =
-      next_newline == std::string::npos ? source.size() : next_newline;
-  std::cerr << source.substr(line_start, line_end - line_start) << '\n'
-            << std::string(span.begin.col - 1, ' ') << "^\n";
+  if (const auto *string = std::get_if<std::string>(&operand.value)) {
+    return "'" + *string + "'";
+  }
+
+  return attribute_name(std::get<AttributeReference>(operand.value));
 }
 
-RunStatus run_source(Interpreter &interpreter, const std::string &source) {
-  Result tokenized = Lexer::tokenize(source);
+std::string comparison_text(ComparisonOperator operation) {
+  switch (operation) {
+  case ComparisonOperator::Equal:
+    return "=";
+  case ComparisonOperator::NotEqual:
+    return "!=";
+  case ComparisonOperator::Less:
+    return "<";
+  case ComparisonOperator::LessEqual:
+    return "<=";
+  case ComparisonOperator::Greater:
+    return ">";
+  case ComparisonOperator::GreaterEqual:
+    return ">=";
+  }
+  throw std::logic_error("UNKNOWN COMPARISON OPERATOR!!");
+}
 
-  if (tokenized.error.has_value()) {
-    if (tokenized.error->type == EType::UnterminatedComment) {
-      return RunStatus::Incomplete;
-    }
-
-    print_diagnostic("lexer error", tokenized.error->message,
-                     tokenized.error->span, source);
-    return RunStatus::Error;
+std::string condition_text(const Condition &condition) {
+  if (const auto *comparison =
+          std::get_if<ComparisonCondition>(&condition.node)) {
+    return operand_text(comparison->left) + " " +
+           comparison_text(comparison->lil_durk) + " " +
+           operand_text(comparison->right);
   }
 
-  std::variant<Program, ParseError> parsed =
-      Parser::parse_tokens(tokenized.tokens);
-
-  if (const auto *error = std::get_if<ParseError>(&parsed)) {
-    if (error->actual == TType::EndOfInput) {
-      return RunStatus::Incomplete;
-    }
-
-    print_diagnostic("syntax error", error->message, error->span, source);
-    return RunStatus::Error;
+  if (const auto *logical =
+          std::get_if<LogicalCondition>(&condition.node)) {
+    const std::string operation =
+        logical->king_von == LogicalOperator::And ? " && " : " || ";
+    return "(" + condition_text(*logical->left) + operation +
+           condition_text(*logical->right) + ")";
   }
 
-  const Program &program = std::get<Program>(parsed);
-  bool printed_relation = false;
+  const auto &negation = std::get<NotCondition>(condition.node);
+  return "!(" + condition_text(*negation.operand) + ")";
+}
+
+std::string binary_name(BinaryOperator operation) {
+  switch (operation) {
+  case BinaryOperator::UNION:
+    return "Union";
+  case BinaryOperator::INTERSECT:
+    return "Intersect";
+  case BinaryOperator::MINUS:
+    return "Minus";
+  case BinaryOperator::TIMES:
+    return "Times";
+  }
+  throw std::logic_error("UNKNOWN BINARY OPERATOR!!");
+}
+
+std::string attributes_text(
+    const std::vector<AttributeReference> &attributes) {
+  std::string result;
+  for (std::size_t i = 0; i < attributes.size(); ++i) {
+    if (i > 0) {
+      result += ", ";
+    }
+    result += attribute_name(attributes[i]);
+  }
+  return result;
+}
+
+void print_indent(int depth) {
+  std::cout << std::string(depth * 2, ' ');
+}
+
+void print_tree(const REX &expression, int depth) {
+  print_indent(depth);
+
+  if (const auto *relation = std::get_if<NameWithSpan>(&expression.node)) {
+    std::cout << "Relation(" << relation->name << ")\n";
+    return;
+  }
+
+  if (const auto *binary =
+          std::get_if<BinaryExpression>(&expression.node)) {
+    std::cout << binary_name(binary->operation) << '\n';
+    print_tree(*binary->left, depth + 1);
+    print_tree(*binary->right, depth + 1);
+    return;
+  }
+
+  if (const auto *join = std::get_if<JoinExpression>(&expression.node)) {
+    std::cout << "Join(" << condition_text(join->condition) << ")\n";
+    print_tree(*join->left, depth + 1);
+    print_tree(*join->right, depth + 1);
+    return;
+  }
+
+  if (const auto *selection =
+          std::get_if<SelectExpression>(&expression.node)) {
+    std::cout << "Select(" << condition_text(selection->condition) << ")\n";
+    print_tree(*selection->input, depth + 1);
+    return;
+  }
+
+  if (const auto *projection =
+          std::get_if<ProjectExpression>(&expression.node)) {
+    std::cout << "Project(" << attributes_text(projection->attributes)
+              << ")\n";
+    print_tree(*projection->input, depth + 1);
+    return;
+  }
+
+  if (const auto *rename =
+          std::get_if<RenameTableExpression>(&expression.node)) {
+    std::cout << "RenameTable(" << rename->new_name.name << ")\n";
+    print_tree(*rename->input, depth + 1);
+    return;
+  }
+
+  if (const auto *rename =
+          std::get_if<RenameAttributeExpression>(&expression.node)) {
+    std::cout << "RenameAttribute(" << rename->new_name.name << ", "
+              << attribute_name(rename->old_name) << ")\n";
+    print_tree(*rename->input, depth + 1);
+    return;
+  }
+
+  throw std::logic_error("unknown expression");
+}
+
+void execute_program(Interpreter &interpreter, const Program &program) {
+  bool printed = false;
 
   try {
     for (const Statement &statement : program.statements) {
       if (auto result = interpreter.execute(statement)) {
         print_relation(*result);
-        printed_relation = true;
+        printed = true;
       }
     }
   } catch (const std::exception &error) {
     std::cerr << "runtime error: " << error.what() << '\n';
-    return RunStatus::Error;
+    return;
   }
 
-  if (!printed_relation) {
+  if (!printed) {
     std::cout << "OK\n";
   }
+}
 
-  return RunStatus::Success;
+void print_program_trees(const Program &program) {
+  for (const Statement &statement : program.statements) {
+    const auto *query = std::get_if<REX>(&statement.guy);
+    if (query == nullptr) {
+      std::cerr << "tree error: expected a query statement\n";
+      return;
+    }
+    print_tree(*query, 0);
+  }
 }
 
 int main() {
+  std::cout << "Choose a mode:\n"
+            << "1) live\n"
+            << "2) tree\n"
+            << "> " << std::flush;
+
+  std::string choice;
+  if (!std::getline(std::cin, choice)) {
+    return 0;
+  }
+
+  if (choice != "1" && choice != "2") {
+    std::cerr << "invalid mode\n";
+    return 1;
+  }
+
+  const bool tree_mode = choice == "2";
   Interpreter interpreter;
   std::string source;
   std::string line;
-
-  std::cout << "Relasaurus REPL (:quit to exit)\n";
 
   while (true) {
     std::cout << (source.empty() ? "> " : "... ") << std::flush;
@@ -185,17 +239,22 @@ int main() {
       continue;
     }
 
-    source += line;
-    source += '\n';
+    source += line + '\n';
+    ParsedInput parsed = parse_repl_source(source);
 
-    if (!has_final_semicolon(source)) {
+    if (parsed.status == ParseStatus::Incomplete) {
       continue;
     }
 
-    const RunStatus status = run_source(interpreter, source);
-    if (status != RunStatus::Incomplete) {
-      source.clear();
+    if (parsed.status == ParseStatus::Success) {
+      if (tree_mode) {
+        print_program_trees(parsed.program);
+      } else {
+        execute_program(interpreter, parsed.program);
+      }
     }
+
+    source.clear();
   }
 
   return 0;

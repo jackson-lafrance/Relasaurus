@@ -177,6 +177,17 @@ All binary operators have the same precedence
 Everything is left associative so in (A+B-C), A+B -> X happens, then X-C happens
 Precedence can be overruled by parantheses, the innermost parantheses are evaluated first, etc. So in (A union (B minus C)), B minus C -> X happens, then A union X happens
 
+A little cheat sheet follows
+| Domain | Level | Operators or forms | Associativity | Enforcing grammar rule |
+|---|---:|---|---|---|
+| Relational | 2 | `select`, `project`, `renameTable`, `renameAttribute` | Not applicable; their operands are explicitly delimited | `primary = ident \| "(" rex ")" \| uop` |
+| Relational | 1 | `+`, `&`, `-`, `*`, `@{condition}` | Left | `rex = primary, { bop }` |
+| Condition | 4 | `=`, `!=`, `<`, `<=`, `>`, `>=` | Non-associative | `comparison = operand, cop, operand` |
+| Condition | 3 | `!` | Right | `not_expr = "!", not_expr \| "(", condition, ")" \| comparison` |
+| Condition | 2 | `&&` | Left | `and_expr = not_expr, { "&&", not_expr }` |
+| Condition | 1 | `||` | Left | `or_expr = and_expr, { "||", and_expr }` |
+
+
 # 5.3 An ambiguity demonstration
 Expr ::= Expr "union" Expr
        | Expr "minus" Expr
@@ -212,6 +223,30 @@ The second tree will produce a relation with one tuple ("COOL", "MATH", "GAMES")
 My grammar removes the ambiguity because it says the leftmost operation goes first
 So only the first parse tree and result will happen
 If you want the second one to happen, you have to use parantheses
+
+The rule that does this in my actual grammar is:
+
+rex = primary, { bop }
+bop = ("+" | "&" | "-" | "*"), primary | "@", "{", condition, "}", primary
+
+
+The repetition is folded from left to right. It produces one ordered sequence of primaries and operators instead 
+of allowing either operand of every operator to independently become another complete expression.
+
+Therefore A+B-C
+is forced to mean (A+B)-C
+The other grouping must be requested explicitly A+(B-C)
+
+   The same database instance also demonstrates why the associativity of minus
+   matters.
+
+With left associativity:
+A-B-C = (A-B)-C = {}-C = {}
+
+With right associativity:
+A-(B-C) = A-{} = {("COOL", "MATH", "GAMES")}
+
+My grammar and parser choose the first result because relational binary operators are left-associative
 
 # EBNF
 
@@ -250,7 +285,7 @@ operand = num | quote_str | attribute_ref
 digit = "0" | "1" | "2" | "3" | "4"
       | "5" | "6" | "7" | "8" | "9"
 
-num = [ "-" ], digit, { digit }, [ ".", digit, { digit } ]
+num = [ "-" ], digit, { digit }, [ ".", { digit } ]
 
 quote_str = "'", { character | "''" }, "'"
 letter = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z" |
@@ -264,7 +299,11 @@ ident = letter, { letter | digit | "_" }
 # 5.4 A parsing strategy justification
 I implemented a hand written recursive descent parser because my grammar maps onto separate parsing functions really naturally 
 Each major rule has a corresponding function.  Relational binary operators are parsed in a loop inside parse_rex,
-which makes them left associative and gives them all the same precedence
+which makes them left associative and gives them all the same precedence. 
+
+A recursive descent parser can't use a rule like:
+Expr ::= Expr "+" Primary | Primary
+or else it will just go on infinitely.  My grammar avoids that though
 
 Boolean precedence is represented by the separate parsing levels of parse_or, which calls parse_and, which calls parse_not, 
 which finally parses the comparisons Parenthesied expressions just shoot straight back to parse_or using the overpowered 
@@ -284,3 +323,5 @@ Dragon book https://faculty.sist.shanghaitech.edu.cn/faculty/songfu/cav/Dragon-b
 Stack overflow https://stackoverflow.com/questions/50410868/bash-parsing-a-number-out-of-a-text-string, https://stackoverflow.com/questions/15403815/how-to-initialize-the-reference-member-variable-of-a-class, etc
 Compile and Run https://www.compilenrun.com/docs/language/cpp/cpp-best-practices/cpp-code-organization/
 I can show my tab list if you want to see all the geeks for geeks links and standard library pages
+
+Check design log for areas AI was wrong

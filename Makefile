@@ -1,7 +1,8 @@
 CXX := c++
 
 CPPFLAGS := -Iinclude
-CXXFLAGS := -std=c++20 -Wall -Wextra -Wpedantic -MMD -MP
+OPTFLAGS ?= -O3 -DNDEBUG
+CXXFLAGS := -std=c++20 $(OPTFLAGS) -Wall -Wextra -Wpedantic -MMD -MP
 
 SOURCES := src/algebra.cc src/relation.cc src/schema.cc src/lexer.cc src/parser.cc src/interpreter.cc src/repl.cc
 OBJECTS := $(SOURCES:src/%.cc=build/%.o)

@@ -182,7 +182,7 @@ Relation Algebra::intersect(const Relation &rel_1, const Relation &rel_2) {
     throw DiagnosticError(DiagnosticCategory::Schema,
                           "SCHEMA'S NOT COMPATIBLE");
 
-  Relation out(rel_1.name() + " INTERSECT " + rel_2.name(), rel_1.schema());
+  Relation out(rel_1.name(), rel_1.schema());
 
   for (const auto &tuple : rel_1.tuples())
     if (rel_2.contains(tuple))
@@ -196,7 +196,7 @@ Relation Algebra::minus(const Relation &rel_1, const Relation &rel_2) {
     throw DiagnosticError(DiagnosticCategory::Schema,
                           "SCHEMA'S NOT COMPATIBLE");
 
-  Relation out(rel_1.name() + " MINUS " + rel_2.name(), rel_1.schema());
+  Relation out(rel_1.name(), rel_1.schema());
 
   for (const auto &tuple : rel_1.tuples())
     if (!rel_2.contains(tuple))
@@ -210,7 +210,7 @@ Relation Algebra::onion(const Relation &rel_1, const Relation &rel_2) {
     throw DiagnosticError(DiagnosticCategory::Schema,
                           "SCHEMA'S NOT COMPATIBLE");
 
-  Relation out(rel_1.name() + " UNION " + rel_2.name(), rel_1.schema());
+  Relation out(rel_1.name(), rel_1.schema());
 
   for (const auto &tuple : rel_1.tuples())
     out.insert_row(tuple);

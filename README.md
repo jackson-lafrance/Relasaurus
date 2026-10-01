@@ -8,7 +8,7 @@
 Relasaurus is my dinosaur themed relational algebra interpreter. (REX stands for relational expression but also meant to be cool like t-rex)
 It uses my custom query language defined in GRAMMAR.md, that is extra special because it completely ignores newlines and spaces in ALL cases!
 
-There are 3.5 main user facing features.
+There are 3.5.5 main user facing features.
 
 ## 1.0) Tree Mode (make run, option 2)
 

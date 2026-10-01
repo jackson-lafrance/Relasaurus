@@ -174,7 +174,8 @@ The join rate at 8k tuples was measured with 3 diff match rates
 
 Changing the match rate didn't really do anything because the nested loop join measures every pair
 regardless of whether it matches the condition.  The spread is just noise or maybe even a little bit
-because making more matches needs extra tuple copying, hashing, and insertion.
+because making more matches needs extra tuple copying, hashing, and insertion. They don't differ
+for me because I hash my tuples for constant time insertion (expected and amortized).
 
 # Prediction for one million tuples per relation
 A nested loop join of two one million relations would make 1,000,000 × 1,000,000 = 1,000,000,000,000 comparisons

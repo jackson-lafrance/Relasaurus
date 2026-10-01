@@ -4,6 +4,7 @@
 #include <chrono>
 #include <exception>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -233,12 +234,15 @@ int main() {
   Interpreter interpreter;
   std::string source;
   std::string line;
+  std::optional<ParseError> incomplete_error;
 
   while (true) {
     std::cout << (source.empty() ? "> " : "... ") << std::flush;
 
     if (!std::getline(std::cin, line)) {
-      if (!source.empty()) {
+      if (incomplete_error.has_value()) {
+        print_parse_error(*incomplete_error, source);
+      } else if (!source.empty()) {
         std::cerr << "SYNTAX ERROR: INCOMPLETE INPUT AT END OF FILE!!!!\n";
       }
       break;
@@ -256,8 +260,11 @@ int main() {
     ParsedInput parsed = parse_repl_source(source);
 
     if (parsed.status == ParseStatus::Incomplete) {
+      incomplete_error = parsed.incomplete_error;
       continue;
     }
+
+    incomplete_error.reset();
 
     if (parsed.status == ParseStatus::Success) {
       if (tree_mode) {

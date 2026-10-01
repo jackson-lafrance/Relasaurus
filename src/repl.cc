@@ -32,30 +32,43 @@ void print_diagnostic(const std::string &category, const std::string &message,
             << std::string(span.begin.col - 1, ' ') << "^\n";
 }
 
+void print_parse_error(const ParseError &error, const std::string &source) {
+  print_diagnostic("syntax error", error.message, error.span, source);
+}
+
 ParsedInput parse_repl_source(const std::string &source) {
   Result tokenized = Lexer::tokenize(source);
 
   if (tokenized.error.has_value()) {
     if (tokenized.error->type == EType::UnterminatedComment) {
-      return {.status = ParseStatus::Incomplete, .statement = {}};
+      return {.status = ParseStatus::Incomplete,
+              .statement = {},
+              .incomplete_error = std::nullopt};
     }
 
     print_diagnostic("lexer error", tokenized.error->message,
                      tokenized.error->span, source);
-    return {.status = ParseStatus::Error, .statement = {}};
+    return {.status = ParseStatus::Error,
+            .statement = {},
+            .incomplete_error = std::nullopt};
   }
 
   auto parsed = Parser::parse_tokens(tokenized.tokens);
 
   if (const auto *error = std::get_if<ParseError>(&parsed)) {
     if (error->actual == TType::EndOfInput) {
-      return {.status = ParseStatus::Incomplete, .statement = {}};
+      return {.status = ParseStatus::Incomplete,
+              .statement = {},
+              .incomplete_error = *error};
     }
 
-    print_diagnostic("syntax error", error->message, error->span, source);
-    return {.status = ParseStatus::Error, .statement = {}};
+    print_parse_error(*error, source);
+    return {.status = ParseStatus::Error,
+            .statement = {},
+            .incomplete_error = std::nullopt};
   }
 
   return {.status = ParseStatus::Success,
-          .statement = std::get<Statement>(std::move(parsed))};
+          .statement = std::get<Statement>(std::move(parsed)),
+          .incomplete_error = std::nullopt};
 }

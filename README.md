@@ -38,37 +38,37 @@ I know I put some instructions there, but basically you can see everything in th
 
 To build the application and test executable
 
-make
+`make`
 
 
 To build and start the interactive application
 
-make run
+`make run`
 
 
 To run the required test suite
 
-make test
+`make test`
 
 
 To delete compiled files
 
-make clean
+`make clean`
 
 
 To make an optimized build that I used for benchmarking run
 
-make -B OPTFLAGS="-O3 -DNDEBUG -march=native" build/relasaurus
+`make -B OPTFLAGS="-O3 -DNDEBUG -march=native" build/relasaurus`
 
 
 To run the generator (replace N and M with numbers)
 
-ruby stats/generate.rb --size=N --match-rate=M | ./build/relasaurus
+`ruby stats/generate.rb --size=N --match-rate=M | ./build/relasaurus`
 
 
 To run the python script to make the graph
 
-python3 stats/plot.py
+`python3 stats/plot.py`
 
 
 also pro tip: :q or :quit quits the repl

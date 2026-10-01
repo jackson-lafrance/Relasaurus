@@ -8,6 +8,47 @@
 #include <variant>
 #include <vector>
 
+static std::string resolve_unqualified_attribute(const std::string &name,
+                                                 const Schema &schema) {
+  const Column *match = nullptr;
+  const std::string qualified_suffix = "." + name;
+
+  for (const Column &column : schema.columns()) {
+    if (column.name != name && !column.name.ends_with(qualified_suffix))
+      continue;
+
+    if (match != nullptr)
+      throw std::runtime_error("AMBIGUOUS ATTRIBUTE: " + name);
+
+    match = &column;
+  }
+
+  if (match == nullptr)
+    throw std::runtime_error("UNKNOWN ATTRIBUTE: " + name);
+
+  return match->name;
+}
+
+static std::string resolve_attribute(const AttributeReference &reference,
+                                     const Schema &schema,
+                                     const std::string &relation_name) {
+  const std::string &attribute_name = reference.attribute_name.name;
+
+  if (!reference.relation_name.has_value())
+    return resolve_unqualified_attribute(attribute_name, schema);
+
+  const std::string &qualifier = reference.relation_name->name;
+  const std::string qualified_name = qualifier + "." + attribute_name;
+
+  if (schema.index_of(qualified_name) != Schema::npos)
+    return qualified_name;
+
+  if (qualifier == relation_name)
+    return resolve_unqualified_attribute(attribute_name, schema);
+
+  throw std::runtime_error("UNKNOWN QUALIFIED ATTRIBUTE: " + qualified_name);
+}
+
 const OperationStats &Interpreter::stats() const { return stats_; }
 
 std::optional<Relation> Interpreter::execute(const Statement &statement) {
@@ -126,19 +167,7 @@ Relation Interpreter::evaluate(const REX &expression) {
     attrs.reserve(projection->attributes.size());
 
     for (const AttributeReference &ref : projection->attributes) {
-      std::string name = ref.attribute_name.name;
-      if (ref.relation_name.has_value()) {
-        const std::string qualified_name = ref.relation_name->name + "." + name;
-
-        if (input.schema().index_of(qualified_name) != Schema::npos) {
-          name = qualified_name;
-        } else if (ref.relation_name->name != input.name()) {
-          throw std::runtime_error("UNKNOWN QUALIFIED ATTRIBUTE: " +
-                                   qualified_name);
-        }
-      }
-
-      attrs.push_back(std::move(name));
+      attrs.push_back(resolve_attribute(ref, input.schema(), input.name()));
     }
 
     return Algebra::projection(input, attrs);
@@ -154,18 +183,8 @@ Relation Interpreter::evaluate(const REX &expression) {
   if (const auto *attr_rename =
           std::get_if<RenameAttributeExpression>(&expression.node)) {
     Relation input = evaluate(*attr_rename->input);
-    std::string name = attr_rename->old_name.attribute_name.name;
-    if (attr_rename->old_name.relation_name.has_value()) {
-      const std::string qualified_name =
-          attr_rename->old_name.relation_name->name + "." + name;
-
-      if (input.schema().index_of(qualified_name) != Schema::npos) {
-        name = qualified_name;
-      } else if (attr_rename->old_name.relation_name->name != input.name()) {
-        throw std::runtime_error("UNKNOWN QUALIFIED ATTRIBUTE: " +
-                                 qualified_name);
-      }
-    }
+    const std::string name = resolve_attribute(
+        attr_rename->old_name, input.schema(), input.name());
 
     return Algebra::rename(input, name, attr_rename->new_name.name);
   }
@@ -243,26 +262,8 @@ Value Interpreter::eval_oppa(const Operand &operand, const Tuple &tuple,
   }
 
   if (const auto *ref = std::get_if<AttributeReference>(&operand.value)) {
-    std::string name = ref->attribute_name.name;
-
-    if (ref->relation_name.has_value()) {
-      const std::string qualified_name = ref->relation_name->name + "." + name;
-
-      if (schema.index_of(qualified_name) != Schema::npos) {
-        name = qualified_name;
-      } else if (ref->relation_name->name != relation_name) {
-        throw std::runtime_error("UNKNOWN QUALIFIED ATTRIBUTE: " +
-                                 qualified_name);
-      }
-    }
-
-    const std::size_t index = schema.index_of(name);
-
-    if (index == Schema::npos) {
-      throw std::runtime_error("UNKNOWN ATTRIBUTE: " + name);
-    }
-
-    return tuple[index];
+    const std::string name = resolve_attribute(*ref, schema, relation_name);
+    return tuple[schema.index_of(name)];
   }
 
   throw std::logic_error("UNKNOWN OPERAND TYPE");

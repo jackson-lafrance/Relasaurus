@@ -3,6 +3,28 @@
 #include <unordered_map>
 #include <utility>
 
+static std::string qualified_column_name(const Relation &relation,
+                                         const Column &column) {
+  if (column.name.find('.') != std::string::npos)
+    return column.name;
+
+  return relation.name() + "." + column.name;
+}
+
+static void append_qualified_columns(
+    const Relation &relation, std::vector<Column> &columns,
+    std::unordered_map<std::string, int> &names) {
+  for (const Column &column : relation.schema().columns()) {
+    std::string name = qualified_column_name(relation, column);
+
+    if (names.contains(name))
+      throw std::runtime_error("DUPLICATE COLUMNS IN TIMES");
+
+    names[name] = 1;
+    columns.push_back({.name = std::move(name), .type = column.type});
+  }
+}
+
 Relation Algebra::selection(const Relation &relation, Predicate predicate,
                             OperationStats *stats) {
   Relation out(relation.name(), relation.schema());
@@ -97,19 +119,8 @@ Relation Algebra::times(const Relation &rel_1, const Relation &rel_2,
   std::vector<Column> columns;
   std::unordered_map<std::string, int> checker;
 
-  for (const auto &column : rel_1.schema().columns()) {
-    columns.push_back(
-        {.name = rel_1.name() + "." + column.name, .type = column.type});
-    checker[rel_1.name() + "." + column.name] = 1;
-  }
-
-  for (const auto &column : rel_2.schema().columns()) {
-    if (checker.contains(rel_2.name() + "." + column.name))
-      throw std::runtime_error("DUPLICATE COLUMNS IN TIMES");
-
-    columns.push_back(
-        {.name = rel_2.name() + "." + column.name, .type = column.type});
-  }
+  append_qualified_columns(rel_1, columns, checker);
+  append_qualified_columns(rel_2, columns, checker);
 
   Relation out(rel_1.name() + " " + modifier + " " + rel_2.name(),
                Schema(std::move(columns)));
@@ -134,18 +145,8 @@ Relation Algebra::join(const Relation &rel_1, const Relation &rel_2,
 
   std::unordered_map<std::string, int> checker;
 
-  for (const Column &column : rel_1.schema().columns()) {
-    columns.push_back(
-        {.name = rel_1.name() + "." + column.name, .type = column.type});
-    checker[rel_1.name() + "." + column.name] = 1;
-  }
-
-  for (const Column &column : rel_2.schema().columns()) {
-    if (checker.contains(rel_2.name() + "." + column.name))
-      throw std::runtime_error("DUPLICATE COLUMNS IN TIMES");
-    columns.push_back(
-        {.name = rel_2.name() + "." + column.name, .type = column.type});
-  }
+  append_qualified_columns(rel_1, columns, checker);
+  append_qualified_columns(rel_2, columns, checker);
 
   Relation output(rel_1.name() + " JOIN " + rel_2.name(),
                   Schema(std::move(columns)));

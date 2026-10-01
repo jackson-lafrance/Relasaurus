@@ -5,24 +5,30 @@ Relasaurus is my dinosaur themed relational algebra interpreter. (REX stands for
 It uses my custom query language defined in GRAMMAR.md, that is extra special because it completely ignores newlines and spaces in ALL cases!
 
 There are 3.5 main user facing features.
-1.0) Tree Mode (make run, option 2)
+
+## 1.0) Tree Mode (make run, option 2)
+
 In this mode, you can run arbitrary queries based on my grammar, and you will get back an abstract syntax tree
 It prints all pretty with proper indentation as you go down the tree
 No queries are actually executed so we don't need any real data
 
-2.0) Test Mode (make test)
+## 2.0) Test Mode (make test)
+
 Runs the required 25 test cases, and prints out their queries, trees, and (hopefully) their pass status
 
-3.0) REPL Mode (make run, option 1)
+## 3.0) REPL Mode (make run, option 1)
+
 This lets you execute actual queries on real data
 This means you must first insert data into memory in the repl, using relation defintions and tuple insertions
 These are all defined in GRAMMAR.md so check it out!
 Once you have stuff in the "database", you can execute queries on it and these will produce the resulting relations
 
-3.5) Stats Mode
+## 3.5) Stats Mode
+
 This is just like REPL mode but you get to see live stats on all queries including comparison counts and query execution times
 
-3.5.5) Bonus tools
+## 3.5.5) Bonus tools
+
 I also wrote a ruby script that generates relations for the join experiments based on program flags
 And a simple python one that plots my data I got from my experiments (Which you should also checkout in my REPORT.MD!!)
 

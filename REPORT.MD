@@ -185,8 +185,8 @@ I did not run this haha
 
 # Making it fast/feasible
 A hash join would make this more practical because the engine could build a hash table over S.b, then scan
-R and probe the table using each R.b value.  This would make it where building the tabe takes O(m), but then
-checking against it would take O9n), plus the cost of matching the output tuples. This would make it O(n+m+output)
+R and probe the table using each R.b value.  This would make it where building the table takes O(m), but then
+checking against it would take O(n), plus the cost of matching the output tuples. This would make it O(n+m+output)
 instead of n*m.  This would take more memory and only optimize equality joins while our current implementation lets 
 us do all theta join conditions
 

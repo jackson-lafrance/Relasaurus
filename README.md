@@ -1,6 +1,7 @@
 # Relasaurus
-Relasaurus is my dinosaur themed relational algebra interpreter.
-It uses my custom query language defined in GRAMMAR.MD, that is extra special because it completely ignores newlines and spaces in ALL cases!
+[REX interpreter](https://github.com/jackson-lafrance/Relasaurus)
+Relasaurus is my dinosaur themed relational algebra interpreter. (REX stands for relational expression but also meant to be cool like t-rex)
+It uses my custom query language defined in GRAMMAR.md, that is extra special because it completely ignores newlines and spaces in ALL cases!
 
 There are 3.5 main user facing features.
 1) Tree Mode (make run, option 2)
@@ -14,7 +15,7 @@ Runs the required 25 test cases, and prints out their queries, trees, and (hopef
 3) REPL Mode (make run, option 1)
 This lets you execute actual queries on real data
 This means you must first insert data into memory in the repl, using relation defintions and tuple insertions
-These are all defined in GRAMMAR.MD so check it out!
+These are all defined in GRAMMAR.md so check it out!
 Once you have stuff in the "database", you can execute queries on it and these will produce the resulting relations
 
 3.5) Stats Mode
@@ -48,6 +49,8 @@ ruby stats/generate.rb --size=N --match-rate=M | ./build/relasaurus
 To run the python script to make the graph
 python3 stats/plot.py
 
+also pro tip: :q or :quit quits the repl
+
 # Limitations
 The biggest one is that I store everything in memory, so you can't really save any data without alot of tricky piping
 Another one is that I only allow numbers and string in the database, which is pretty restrictive so no bools, dates, null values, or anything fancy
@@ -55,3 +58,4 @@ Also you can't use SQL you have to use my evil syntax (which I actually think is
 Joins use a nested loop so they need O(n*m) comparisons.  This gets really slow!
 I have no query optimizer so expressions are evaluated in the order you specify by the syntax
 My bonus programs (for stats generation and plotting) are a little finicky and not very portable
+A self join is impossible without a rename because all of the relations would have the same qualified name otherwise, which would error out

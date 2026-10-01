@@ -262,4 +262,25 @@ ident = letter, { letter | digit | "_" }
 ```
 
 # 5.4 A parsing strategy justification
+I implemented a hand written recursive descent parser because my grammar maps onto separate parsing functions really naturally 
+Each major rule has a corresponding function.  Relational binary operators are parsed in a loop inside parse_rex,
+which makes them left associative and gives them all the same precedence
+
+Boolean precedence is represented by the separate parsing levels of parse_or, which calls parse_and, which calls parse_not, 
+which finally parses the comparisons Parenthesied expressions just shoot straight back to parse_or using the overpowered 
+std::unique_ptr.  The parser makes and AST represented by a std::variant for the different node types
+
+All the spans from the tokens are passed through so syntax errors can report their actual proper location
+
+I liked this more than a parser generator because the grammar is small and the rules are simple.  So having direct
+control over the parsing and error messages was useful for the REPL.
+
 # 5.5 Sources
+Geeks for geeks used extensively https://www.geeksforgeeks.org/cpp/switch-statement-in-cpp/
+Relational algebra wikipedia https://en.wikipedia.org/wiki/Relational_algebra#Projection
+Relational algebra for modern times https://www.relational-algebra.dev/ra-primer/using-joins/
+C++ standard library docs  https://en.cppreference.com/cpp/utility/functional/function
+Dragon book https://faculty.sist.shanghaitech.edu.cn/faculty/songfu/cav/Dragon-book.pdf
+Stack overflow https://stackoverflow.com/questions/50410868/bash-parsing-a-number-out-of-a-text-string, https://stackoverflow.com/questions/15403815/how-to-initialize-the-reference-member-variable-of-a-class, etc
+Compile and Run https://www.compilenrun.com/docs/language/cpp/cpp-best-practices/cpp-code-organization/
+I can show my tab list if you want to see all the geeks for geeks links and standard library pages

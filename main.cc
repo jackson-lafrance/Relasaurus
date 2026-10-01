@@ -1,6 +1,7 @@
 #include "interpreter.h"
 #include "repl.h"
 
+#include <chrono>
 #include <exception>
 #include <iostream>
 #include <sstream>
@@ -169,27 +170,35 @@ void print_tree(const REX &expression, int depth) {
   throw std::logic_error("UNKNOWN EXPRESSION!!!!");
 }
 
-void print_stats(const Interpreter &interpreter) {
+void print_stats(const Interpreter &interpreter, double wall_time,
+                 std::size_t output_tuples) {
   const OperationStats &stats = interpreter.stats();
   std::cout << "SELECTION EXAMINATIONS: " << stats.selection_examinations
             << '\n'
-            << "JOIN COMPARISONS: " << stats.join_comparisons << '\n';
+            << "JOIN COMPARISONS: " << stats.join_comparisons << '\n'
+            << "WALL TIME (S): " << wall_time << '\n'
+            << "OUTPUT TUPLES: " << output_tuples << '\n';
 }
 
 void execute_statement(Interpreter &interpreter, const Statement &statement,
                        bool stats_mode) {
   try {
-    if (auto result = interpreter.execute(statement)) {
+    const auto start = std::chrono::steady_clock::now();
+    auto result = interpreter.execute(statement);
+    const auto end = std::chrono::steady_clock::now();
+    const double wall_time =
+        std::chrono::duration<double>(end - start).count();
+
+    if (result.has_value()) {
       print_relation(*result);
+      if (stats_mode) {
+        print_stats(interpreter, wall_time, result->tuples().size());
+      }
     } else {
       std::cout << "OK\n";
     }
   } catch (const std::exception &error) {
     std::cerr << "runtime error: " << error.what() << '\n';
-  }
-
-  if (stats_mode && std::holds_alternative<REX>(statement.guy)) {
-    print_stats(interpreter);
   }
 }
 

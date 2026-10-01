@@ -1,5 +1,6 @@
 #include "interpreter.h"
 #include "algebra.h"
+#include "diagnostic.h"
 #include "parser.h"
 #include "relation.h"
 #include <optional>
@@ -18,13 +19,15 @@ static std::string resolve_unqualified_attribute(const std::string &name,
       continue;
 
     if (match != nullptr)
-      throw std::runtime_error("AMBIGUOUS ATTRIBUTE: " + name);
+      throw DiagnosticError(DiagnosticCategory::Name,
+                            "AMBIGUOUS ATTRIBUTE: " + name);
 
     match = &column;
   }
 
   if (match == nullptr)
-    throw std::runtime_error("UNKNOWN ATTRIBUTE: " + name);
+    throw DiagnosticError(DiagnosticCategory::Name,
+                          "UNKNOWN ATTRIBUTE: " + name);
 
   return match->name;
 }
@@ -46,7 +49,8 @@ static std::string resolve_attribute(const AttributeReference &reference,
   if (qualifier == relation_name)
     return resolve_unqualified_attribute(attribute_name, schema);
 
-  throw std::runtime_error("UNKNOWN QUALIFIED ATTRIBUTE: " + qualified_name);
+  throw DiagnosticError(DiagnosticCategory::Name,
+                        "UNKNOWN QUALIFIED ATTRIBUTE: " + qualified_name);
 }
 
 const OperationStats &Interpreter::stats() const { return stats_; }
@@ -57,7 +61,8 @@ std::optional<Relation> Interpreter::execute(const Statement &statement) {
     const std::string &name = definition->name.name;
 
     if (relations_.contains(name)) {
-      throw std::runtime_error("RELATION ALREADY EXISTS: " + name);
+      throw DiagnosticError(DiagnosticCategory::Name,
+                            "RELATION ALREADY EXISTS: " + name);
     }
 
     std::vector<Column> columns;
@@ -81,8 +86,9 @@ std::optional<Relation> Interpreter::execute(const Statement &statement) {
     auto existing = relations_.find(insertion->name.name);
 
     if (existing == relations_.end()) {
-      throw std::runtime_error("RELATION DOES NOT EXIST: " +
-                               insertion->name.name);
+      throw DiagnosticError(DiagnosticCategory::Name,
+                            "RELATION DOES NOT EXIST: " +
+                                insertion->name.name);
     }
 
     Relation updated = existing->second;
@@ -107,7 +113,8 @@ Relation Interpreter::evaluate(const REX &expression) {
     const auto existing = relations_.find(name->name);
 
     if (existing == relations_.end()) {
-      throw std::runtime_error("RELATION DOES NOT EXIST: " + name->name);
+      throw DiagnosticError(DiagnosticCategory::Name,
+                            "RELATION DOES NOT EXIST: " + name->name);
     }
 
     return existing->second;
@@ -203,11 +210,12 @@ bool Interpreter::eval_cond(const Condition &condition, const Tuple &tuple,
         eval_oppa(comparison_condition->right, tuple, schema, relation_name);
 
     if (left.index() != right.index()) {
-      throw std::runtime_error(
+      throw DiagnosticError(
+          DiagnosticCategory::Type,
           std::string("CANNOT COMPARE ") +
-          (std::holds_alternative<double>(left) ? "NUMBER" : "STRING") +
-          " TO A " +
-          (std::holds_alternative<double>(right) ? "NUMBER" : "STRING"));
+              (std::holds_alternative<double>(left) ? "NUMBER" : "STRING") +
+              " TO A " +
+              (std::holds_alternative<double>(right) ? "NUMBER" : "STRING"));
     }
 
     switch (comparison_condition->lil_durk) {

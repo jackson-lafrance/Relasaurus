@@ -1,3 +1,4 @@
+#include "diagnostic.h"
 #include "interpreter.h"
 #include "lexer.h"
 #include "parser.h"
@@ -98,6 +99,10 @@ string runtime_error(Interpreter &interpreter, const string &source) {
   auto parsed = parse(source);
   try {
     interpreter.execute(parsed.statement);
+  } catch (const DiagnosticError &error) {
+    std::cout << diagnostic_category_name(error.category())
+              << " error: " << error.what() << '\n';
+    return error.what();
   } catch (const std::runtime_error &error) {
     std::cout << "runtime error: " << error.what() << '\n';
     return error.what();
@@ -152,7 +157,7 @@ int main() {
     check(result.error && result.error->type == EType::UnterminatedString &&
               result.error->span.begin.offset == source.find('\''),
           "wrong error");
-    std::cout << "lexer error at " << result.error->span.begin.row << ':'
+    std::cout << "lexical error at " << result.error->span.begin.row << ':'
               << result.error->span.begin.col << ": "
               << result.error->message << '\n';
   });

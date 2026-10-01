@@ -195,7 +195,7 @@ ParsedInput parse_repl_source(const std::string &source) {
               .incomplete_error = std::nullopt};
     }
 
-    print_diagnostic("lexer error", tokenized.error->message,
+    print_diagnostic("lexical error", tokenized.error->message,
                      tokenized.error->span, source);
     return {.status = ParseStatus::Error,
             .statement = {},

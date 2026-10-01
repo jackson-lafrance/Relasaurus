@@ -1,3 +1,4 @@
+#include "diagnostic.h"
 #include "interpreter.h"
 #include "repl.h"
 
@@ -35,6 +36,9 @@ void execute_statement(Interpreter &interpreter, const Statement &statement,
     } else {
       std::cout << "OK\n";
     }
+  } catch (const DiagnosticError &error) {
+    std::cerr << diagnostic_category_name(error.category())
+              << " error: " << error.what() << '\n';
   } catch (const std::exception &error) {
     std::cerr << "runtime error: " << error.what() << '\n';
   }

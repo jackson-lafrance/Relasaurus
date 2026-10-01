@@ -1,4 +1,5 @@
 #include "relation.h"
+#include "diagnostic.h"
 #include "schema.h"
 #include <functional>
 #include <stdexcept>
@@ -103,7 +104,8 @@ const Schema &Relation::schema() const { return schema_; }
 
 void Relation::validate_row(const Tuple &tuple) {
   if (tuple.size() != schema_.columns().size()) {
-    throw std::runtime_error("TUPLE LENGTH != ATTRIBUTES LENGTH");
+    throw DiagnosticError(DiagnosticCategory::Schema,
+                          "TUPLE LENGTH != ATTRIBUTES LENGTH");
   }
   for (std::size_t i{}; i < tuple.size(); ++i) {
     bool matches = false;
@@ -116,6 +118,7 @@ void Relation::validate_row(const Tuple &tuple) {
       break;
     }
     if (!matches)
-      throw std::runtime_error("TUPLE TYPES DO NOT MATCH SCHEMA");
+      throw DiagnosticError(DiagnosticCategory::Type,
+                            "TUPLE TYPES DO NOT MATCH SCHEMA");
   }
 }

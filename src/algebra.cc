@@ -1,4 +1,5 @@
 #include "algebra.h"
+#include "diagnostic.h"
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
@@ -18,7 +19,8 @@ static void append_qualified_columns(
     std::string name = qualified_column_name(relation, column);
 
     if (names.contains(name))
-      throw std::runtime_error("DUPLICATE COLUMNS IN TIMES");
+      throw DiagnosticError(DiagnosticCategory::Schema,
+                            "DUPLICATE COLUMNS IN TIMES");
 
     names[name] = 1;
     columns.push_back({.name = std::move(name), .type = column.type});
@@ -55,7 +57,7 @@ Relation Algebra::projection(const Relation &relation,
   for (const std::string &attribute : attributes) {
     const std::size_t index = schema.index_of(attribute);
     if (index == Schema::npos)
-      throw std::runtime_error("UNKNOWN ATTRIBUTE");
+      throw DiagnosticError(DiagnosticCategory::Name, "UNKNOWN ATTRIBUTE");
 
     if (checker.contains(attribute)) {
       continue;
@@ -96,11 +98,13 @@ Relation Algebra::rename(const Relation &relation, std::string old_attr,
   const std::size_t index = schema.index_of(old_attr);
 
   if (index == Schema::npos)
-    throw std::runtime_error("UNKNOWN ATTRIBUTE: " + old_attr);
+    throw DiagnosticError(DiagnosticCategory::Name,
+                          "UNKNOWN ATTRIBUTE: " + old_attr);
 
   const std::size_t existing_index = schema.index_of(new_attr);
   if (existing_index != Schema::npos && existing_index != index)
-    throw std::runtime_error("ATTRIBUTE ALREADY EXISTS: " + new_attr);
+    throw DiagnosticError(DiagnosticCategory::Schema,
+                          "ATTRIBUTE ALREADY EXISTS: " + new_attr);
 
   std::vector<Column> new_columns = schema.columns();
   new_columns[index] = {.name = std::move(new_attr),
@@ -171,7 +175,8 @@ Relation Algebra::join(const Relation &rel_1, const Relation &rel_2,
 
 Relation Algebra::intersect(const Relation &rel_1, const Relation &rel_2) {
   if (!compare_schemas(rel_1, rel_2))
-    throw std::runtime_error("SCHEMA'S NOT COMPATIBLE");
+    throw DiagnosticError(DiagnosticCategory::Schema,
+                          "SCHEMA'S NOT COMPATIBLE");
 
   Relation out(rel_1.name() + " INTERSECT " + rel_2.name(), rel_1.schema());
 
@@ -184,7 +189,8 @@ Relation Algebra::intersect(const Relation &rel_1, const Relation &rel_2) {
 
 Relation Algebra::minus(const Relation &rel_1, const Relation &rel_2) {
   if (!compare_schemas(rel_1, rel_2))
-    throw std::runtime_error("SCHEMA'S NOT COMPATIBLE");
+    throw DiagnosticError(DiagnosticCategory::Schema,
+                          "SCHEMA'S NOT COMPATIBLE");
 
   Relation out(rel_1.name() + " MINUS " + rel_2.name(), rel_1.schema());
 
@@ -197,7 +203,8 @@ Relation Algebra::minus(const Relation &rel_1, const Relation &rel_2) {
 
 Relation Algebra::onion(const Relation &rel_1, const Relation &rel_2) {
   if (!compare_schemas(rel_1, rel_2))
-    throw std::runtime_error("SCHEMA'S NOT COMPATIBLE");
+    throw DiagnosticError(DiagnosticCategory::Schema,
+                          "SCHEMA'S NOT COMPATIBLE");
 
   Relation out(rel_1.name() + " UNION " + rel_2.name(), rel_1.schema());
 

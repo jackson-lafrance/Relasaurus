@@ -35,34 +35,56 @@ And a simple python one that plots my data I got from my experiments (Which you 
 # Running instructions
 I know I put some instructions there, but basically you can see everything in the makefile
 
+
 To build the application and test executable
+
 make
 
+
 To build and start the interactive application
+
 make run
 
+
 To run the required test suite
+
 make test
 
+
 To delete compiled files
+
 make clean
 
+
 To make an optimized build that I used for benchmarking run
+
 make -B OPTFLAGS="-O3 -DNDEBUG -march=native" build/relasaurus
 
+
 To run the generator (replace N and M with numbers)
+
 ruby stats/generate.rb --size=N --match-rate=M | ./build/relasaurus
 
+
 To run the python script to make the graph
+
 python3 stats/plot.py
+
 
 also pro tip: :q or :quit quits the repl
 
 # Limitations
 The biggest one is that I store everything in memory, so you can't really save any data without alot of tricky piping
+
 Another one is that I only allow numbers and string in the database, which is pretty restrictive so no bools, dates, null values, or anything fancy
+
 Also you can't use SQL you have to use my evil syntax (which I actually think is really good for optimizing against whitespace)
+
 Joins use a nested loop so they need O(n*m) comparisons.  This gets really slow!
+
 I have no query optimizer so expressions are evaluated in the order you specify by the syntax
+
 My bonus programs (for stats generation and plotting) are a little finicky and not very portable
+
 A self join is impossible without a rename because all of the relations would have the same qualified name otherwise, which would error out
+

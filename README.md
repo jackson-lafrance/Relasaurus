@@ -23,7 +23,7 @@ This means you must first insert data into memory in the repl, using relation de
 These are all defined in GRAMMAR.md so check it out!
 Once you have stuff in the "database", you can execute queries on it and these will produce the resulting relations
 
-## 3.5) Stats Mode
+## 3.5) Stats Mode (make run, option 3)
 
 This is just like REPL mode but you get to see live stats on all queries including comparison counts and query execution times
 

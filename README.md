@@ -1,5 +1,5 @@
 # Relasaurus
-[REX interpreter](https://github.com/jackson-lafrance/Relasaurus)
+[REX interpreter](https://www.youtube.com/watch?v=RCGsZo5wV4o)
 
 [![DESIGN VIDEO](https://img.youtube.com/vi/RCGsZo5wV4o/0.jpg)](https://www.youtube.com/watch?v=RCGsZo5wV4o)
 

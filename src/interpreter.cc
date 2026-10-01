@@ -53,6 +53,54 @@ static std::string resolve_attribute(const AttributeReference &reference,
                         "UNKNOWN QUALIFIED ATTRIBUTE: " + qualified_name);
 }
 
+static Type validate_operand(const Operand &operand, const Schema &schema,
+                             const std::string &relation_name) {
+  if (std::holds_alternative<double>(operand.value))
+    return NUMBER;
+
+  if (std::holds_alternative<std::string>(operand.value))
+    return STRING;
+
+  if (const auto *ref = std::get_if<AttributeReference>(&operand.value)) {
+    const std::string name = resolve_attribute(*ref, schema, relation_name);
+    return schema.columns()[schema.index_of(name)].type;
+  }
+
+  throw std::logic_error("UNKNOWN OPERAND TYPE");
+}
+
+static void validate_condition(const Condition &condition, const Schema &schema,
+                               const std::string &relation_name) {
+  if (const auto *comparison =
+          std::get_if<ComparisonCondition>(&condition.node)) {
+    const Type left = validate_operand(comparison->left, schema, relation_name);
+    const Type right =
+        validate_operand(comparison->right, schema, relation_name);
+
+    if (left != right) {
+      throw DiagnosticError(DiagnosticCategory::Type,
+                            std::string("CANNOT COMPARE ") +
+                                (left == NUMBER ? "NUMBER" : "STRING") +
+                                " TO A " +
+                                (right == NUMBER ? "NUMBER" : "STRING"));
+    }
+    return;
+  }
+
+  if (const auto *logical = std::get_if<LogicalCondition>(&condition.node)) {
+    validate_condition(*logical->left, schema, relation_name);
+    validate_condition(*logical->right, schema, relation_name);
+    return;
+  }
+
+  if (const auto *negation = std::get_if<NotCondition>(&condition.node)) {
+    validate_condition(*negation->operand, schema, relation_name);
+    return;
+  }
+
+  throw std::logic_error("UNKNOWN CONDITION TYPE!!");
+}
+
 const OperationStats &Interpreter::stats() const { return stats_; }
 
 std::optional<Relation> Interpreter::execute(const Statement &statement) {
@@ -151,11 +199,15 @@ Relation Interpreter::evaluate(const REX &expression) {
                      const std::string &relation_name) {
           return eval_cond(join->condition, tuple, schema, relation_name);
         },
-        &stats_);
+        &stats_,
+        [join](const Schema &schema, const std::string &relation_name) {
+          validate_condition(join->condition, schema, relation_name);
+        });
   }
 
   if (const auto *selection = std::get_if<SelectExpression>(&expression.node)) {
     Relation input = evaluate(*selection->input);
+    validate_condition(selection->condition, input.schema(), input.name());
 
     return Algebra::selection(
         input,

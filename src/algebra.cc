@@ -142,7 +142,8 @@ Relation Algebra::times(const Relation &rel_1, const Relation &rel_2,
 }
 
 Relation Algebra::join(const Relation &rel_1, const Relation &rel_2,
-                       Predicate predicate, OperationStats *stats) {
+                       Predicate predicate, OperationStats *stats,
+                       ConditionValidator validator) {
   std::vector<Column> columns;
   columns.reserve(rel_1.schema().columns().size() +
                   rel_2.schema().columns().size());
@@ -154,6 +155,9 @@ Relation Algebra::join(const Relation &rel_1, const Relation &rel_2,
 
   Relation output(rel_1.name() + " JOIN " + rel_2.name(),
                   Schema(std::move(columns)));
+
+  if (validator)
+    validator(output.schema(), output.name());
 
   for (const Tuple &left_tuple : rel_1.tuples()) {
     for (const Tuple &right_tuple : rel_2.tuples()) {

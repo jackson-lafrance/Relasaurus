@@ -10,6 +10,8 @@
 
 using Predicate =
     std::function<bool(const Tuple &, const Schema &, const std::string &)>;
+using ConditionValidator =
+    std::function<void(const Schema &, const std::string &)>;
 
 struct OperationStats {
   std::uint64_t join_comparisons{0};
@@ -30,7 +32,8 @@ public:
   static Relation times(const Relation &rel_1, const Relation &rel_2,
                         std::string modifier = "TIMES");
   static Relation join(const Relation &rel_1, const Relation &rel_2,
-                       Predicate predicate, OperationStats *stats = nullptr);
+                       Predicate predicate, OperationStats *stats = nullptr,
+                       ConditionValidator validator = nullptr);
 
   static Relation onion(const Relation &rel_1, const Relation &rel_2);
   static Relation intersect(const Relation &rel_1, const Relation &rel_2);

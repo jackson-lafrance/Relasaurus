@@ -1,5 +1,7 @@
 # Relasaurus
 [REX interpreter](https://github.com/jackson-lafrance/Relasaurus)
+[![DESIGN VIDEO](https://img.youtube.com/vi/RCGsZo5wV4o/0.jpg)](https://www.youtube.com/watch?v=RCGsZo5wV4o)
+*Sorry for the length!*
 
 Relasaurus is my dinosaur themed relational algebra interpreter. (REX stands for relational expression but also meant to be cool like t-rex)
 It uses my custom query language defined in GRAMMAR.md, that is extra special because it completely ignores newlines and spaces in ALL cases!
